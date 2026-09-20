@@ -274,6 +274,135 @@
     flex-shrink: 0;
   }
   .order-row select { margin-bottom: 0; }
+  .players { margin-bottom: 8px; }
+  .player-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .player-list li {
+    font-size: 13px;
+    color: var(--text);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+  }
+  .player-list li:last-child { border-bottom: none; }
+  .player-list .pos {
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .add-player-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .add-player-row input, .add-player-row select {
+    flex: 1;
+    min-width: 120px;
+    margin-bottom: 0;
+  }
+  .add-player-row button {
+    width: auto;
+    flex-shrink: 0;
+    padding: 10px 16px;
+  }
+  .draft-card .start-draft-btn {
+    margin-top: 10px;
+  }
+  .on-clock {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--border);
+    font-size: 13px;
+  }
+  .on-clock.mine {
+    background: rgba(79,140,255,0.18);
+    border: 1px solid var(--accent);
+  }
+  .on-clock.complete {
+    background: rgba(79,219,138,0.15);
+    color: var(--success);
+    font-weight: 600;
+    text-align: center;
+  }
+  .available-players {
+    margin-top: 10px;
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .available-player-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .available-player-row:last-child { border-bottom: none; }
+  .available-player-row .pos {
+    color: var(--muted);
+    font-size: 11px;
+  }
+  .available-player-row button {
+    width: auto;
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+  .pick-history {
+    margin-top: 12px;
+  }
+  .pick-history-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .pick-history-row {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .pick-history-row span:first-child {
+    color: var(--text);
+    width: 32px;
+    flex-shrink: 0;
+  }
+  .pick-history-row:last-child { border-bottom: none; }
+  .bid-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .bid-row select {
+    flex: 1;
+    min-width: 140px;
+    margin-bottom: 0;
+  }
+  .bid-row input {
+    width: 90px;
+    margin-bottom: 0;
+  }
+  .bid-row button {
+    width: auto;
+    flex-shrink: 0;
+    padding: 10px 16px;
+  }
+  .sell-nomination-btn {
+    margin-top: 8px;
+    background: var(--success);
+  }
 </style>
 </head>
 <body>
@@ -307,6 +436,25 @@
     </div>
     <div id="leagueSection" class="league"></div>
 
+    <div class="section-title">Player Pool</div>
+    <div id="playersSection" class="players"></div>
+
+    <div id="playerAddSection" style="display:none;">
+      <div class="add-player-row">
+        <input id="newPlayerName" type="text" placeholder="Player name">
+        <select id="newPlayerPosition">
+          <option value="">Position (optional)</option>
+          <option value="PG">PG</option>
+          <option value="SG">SG</option>
+          <option value="SF">SF</option>
+          <option value="PF">PF</option>
+          <option value="C">C</option>
+        </select>
+        <button id="addPlayerBtn">Add Player</button>
+      </div>
+      <div id="playerMsg" class="msg"></div>
+    </div>
+
     <div class="section-title">Drafts</div>
     <div id="draftsSection" class="drafts"></div>
 
@@ -322,10 +470,8 @@
         <button type="button" id="formatAuctionBtn" class="format-btn">Auction</button>
       </div>
 
-      <div id="snakeFields">
-        <label for="draftRounds">Rounds per team</label>
-        <input id="draftRounds" type="number" min="1" step="1" placeholder="e.g. 13">
-      </div>
+      <label for="draftRounds" id="draftRoundsLabel">Rounds per team</label>
+      <input id="draftRounds" type="number" min="1" step="1" placeholder="e.g. 13">
 
       <div id="auctionFields" style="display:none;">
         <label for="draftBudget">Starting budget per team ($)</label>
@@ -333,7 +479,7 @@
       </div>
 
       <label>Pick Order</label>
-      <div class="field-hint">Round 1 goes Pick 1 → Pick 8. For snake drafts, even rounds reverse automatically.</div>
+      <div class="field-hint">For snake drafts, this is the pick order (round 1 goes Pick 1 → Pick 8, even rounds reverse automatically). For auction drafts, this is the nomination turn order instead.</div>
       <div id="orderRows" class="order-rows"></div>
 
       <button id="createDraftBtn">Create Draft</button>
@@ -374,16 +520,26 @@
   const draftLabelInput = document.getElementById("draftLabel");
   const formatSnakeBtn = document.getElementById("formatSnakeBtn");
   const formatAuctionBtn = document.getElementById("formatAuctionBtn");
-  const snakeFields = document.getElementById("snakeFields");
   const auctionFields = document.getElementById("auctionFields");
+  const draftRoundsLabel = document.getElementById("draftRoundsLabel");
   const draftRoundsInput = document.getElementById("draftRounds");
   const draftBudgetInput = document.getElementById("draftBudget");
   const orderRows = document.getElementById("orderRows");
   const createDraftBtn = document.getElementById("createDraftBtn");
   const draftMsg = document.getElementById("draftMsg");
+  const playersSection = document.getElementById("playersSection");
+  const playerAddSection = document.getElementById("playerAddSection");
+  const newPlayerName = document.getElementById("newPlayerName");
+  const newPlayerPosition = document.getElementById("newPlayerPosition");
+  const addPlayerBtn = document.getElementById("addPlayerBtn");
+  const playerMsg = document.getElementById("playerMsg");
 
   let allTeams = [];
+  let allPlayers = [];
   let selectedFormat = "snake";
+  let isCommissioner = false;
+  let myTeamIds = [];
+  let picksChannel = null;
 
   function showMsg(text, type) {
     loginMsg.textContent = text;
@@ -440,9 +596,39 @@
     });
 
     const me = data.find((gm) => gm.id === user.id);
-    const isCommissioner = !!(me && me.is_commissioner);
+    isCommissioner = !!(me && me.is_commissioner);
+    myTeamIds = me ? (me.teams || []).map((t) => t.id) : [];
     draftSetupSection.style.display = isCommissioner ? "block" : "none";
+    playerAddSection.style.display = isCommissioner ? "block" : "none";
     if (isCommissioner) buildOrderRows();
+  }
+
+  function showPlayerMsg(text, type) {
+    playerMsg.textContent = text;
+    playerMsg.className = "msg " + type;
+  }
+
+  async function loadPlayers() {
+    playersSection.innerHTML = '<div class="league-loading">Loading players…</div>';
+    const { data, error } = await sb.from("players").select("id, name, position").order("name");
+
+    if (error) {
+      playersSection.innerHTML = '<div class="league-error">Could not load players: ' + escapeHtml(error.message) + '</div>';
+      return;
+    }
+
+    allPlayers = data;
+
+    if (data.length === 0) {
+      playersSection.innerHTML = '<div class="league-loading">No players in the pool yet.</div>';
+      return;
+    }
+
+    playersSection.innerHTML = '<ul class="player-list">' + data.map((p) =>
+      "<li><span>" + escapeHtml(p.name) + "</span>" +
+        (p.position ? '<span class="pos">' + escapeHtml(p.position) + "</span>" : "") +
+      "</li>"
+    ).join("") + "</ul>";
   }
 
   function buildOrderRows() {
@@ -468,11 +654,213 @@
     return status.replace("_", " ");
   }
 
+  // Whose turn is it for a given overall pick number, given the draft's team
+  // order? Computed here rather than stored, so it can never drift out of
+  // sync with the actual picks made.
+  function computeTurn(order, teamCount, pickNumber) {
+    const round = Math.ceil(pickNumber / teamCount);
+    const posInRound = pickNumber - (round - 1) * teamCount;
+    const position = (round % 2 === 1) ? posInRound : (teamCount + 1 - posInRound);
+    const slot = order.find((o) => o.pick_position === position);
+    return { round: round, slot: slot };
+  }
+
+  function renderSnakeBoard(d) {
+    const teamCount = d.draft_order.length;
+    const picks = (d.picks || []).slice().sort((a, b) => a.pick_number - b.pick_number);
+    const nextPickNumber = picks.length + 1;
+    const totalPicks = d.rounds ? d.rounds * teamCount : null;
+
+    let html = "";
+
+    if (totalPicks && nextPickNumber > totalPicks) {
+      html += '<div class="on-clock complete">🎉 Draft complete!</div>';
+    } else {
+      const turn = computeTurn(d.draft_order, teamCount, nextPickNumber);
+      const teamName = turn.slot && turn.slot.teams ? turn.slot.teams.name : "Unknown team";
+      const turnGmName = turn.slot && turn.slot.teams && turn.slot.teams.gms ? turn.slot.teams.gms.name : "";
+      const isMyTurn = !!turn.slot && (isCommissioner || myTeamIds.indexOf(turn.slot.team_id) !== -1);
+
+      html += '<div class="on-clock' + (isMyTurn ? " mine" : "") + '">' +
+        "Round " + turn.round + " · Pick " + nextPickNumber + " — <strong>" +
+        escapeHtml(teamName) + "</strong>" + (turnGmName ? " (" + escapeHtml(turnGmName) + ")" : "") +
+        (isMyTurn ? ' <span class="you-badge">On the clock</span>' : "") +
+      "</div>";
+
+      if (isMyTurn && turn.slot) {
+        const pickedIds = new Set(picks.map((p) => p.player_id));
+        const available = allPlayers.filter((p) => !pickedIds.has(p.id));
+        html += '<div class="available-players">' +
+          (available.length === 0
+            ? '<div class="league-loading">No players left in the pool.</div>'
+            : available.map((p) =>
+                '<div class="available-player-row">' +
+                  "<span>" + escapeHtml(p.name) + (p.position ? ' <span class="pos">' + escapeHtml(p.position) + "</span>" : "") + "</span>" +
+                  '<button class="draft-player-btn" data-draft-id="' + d.id +
+                    '" data-team-id="' + turn.slot.team_id +
+                    '" data-pick-number="' + nextPickNumber +
+                    '" data-round="' + turn.round +
+                    '" data-player-id="' + p.id + '">Draft</button>' +
+                "</div>"
+              ).join("")
+          ) +
+        "</div>";
+      }
+    }
+
+    if (picks.length > 0) {
+      html += '<div class="pick-history">' +
+        '<div class="pick-history-title">Picks so far</div>' +
+        picks.slice().reverse().map((p) => {
+          const teamName = p.teams ? p.teams.name : "";
+          const playerName = p.players ? p.players.name : "";
+          return '<div class="pick-history-row"><span>#' + p.pick_number + "</span><span>" +
+            escapeHtml(playerName) + "</span><span>" + escapeHtml(teamName) + "</span></div>";
+        }).join("") +
+      "</div>";
+    }
+
+    return html;
+  }
+
+  function computeTeamBudgets(d) {
+    const budgets = {};
+    d.draft_order.forEach((o) => {
+      budgets[o.team_id] = d.starting_budget || 0;
+    });
+    (d.picks || []).forEach((p) => {
+      if (budgets[p.team_id] !== undefined && p.amount_paid) {
+        budgets[p.team_id] -= p.amount_paid;
+      }
+    });
+    return budgets;
+  }
+
+  function renderAuctionBoard(d) {
+    const teamCount = d.draft_order.length;
+    const picks = d.picks || [];
+    const totalTarget = d.rounds ? d.rounds * teamCount : null;
+    const budgets = computeTeamBudgets(d);
+
+    let html = "";
+
+    if (totalTarget && picks.length >= totalTarget) {
+      html += '<div class="on-clock complete">🎉 Draft complete!</div>';
+    } else {
+      const openNom = (d.nominations || []).find((n) => n.status === "open");
+
+      if (openNom) {
+        const playerName = openNom.players ? openNom.players.name : "Unknown player";
+        const playerPos = openNom.players && openNom.players.position ? openNom.players.position : "";
+        const bidTeamName = openNom.bidder ? openNom.bidder.name : "Nobody yet";
+        const bidGmName = openNom.bidder && openNom.bidder.gms ? openNom.bidder.gms.name : "";
+
+        html += '<div class="on-clock">' +
+          "On the block: <strong>" + escapeHtml(playerName) + "</strong>" +
+          (playerPos ? " (" + escapeHtml(playerPos) + ")" : "") +
+          " — Current bid: <strong>$" + openNom.current_bid + "</strong> by " +
+          escapeHtml(bidTeamName) + (bidGmName ? " (" + escapeHtml(bidGmName) + ")" : "") +
+        "</div>";
+
+        // The team currently holding the high bid can't bid against itself.
+        const biddableTeamIds = (isCommissioner ? allTeams.map((t) => t.id) : myTeamIds)
+          .filter((tid) => tid !== openNom.current_bid_team_id);
+        if (biddableTeamIds.length > 0) {
+          const teamOptions = biddableTeamIds.map((tid) => {
+            const t = allTeams.find((at) => at.id === tid);
+            const bal = budgets[tid] !== undefined ? budgets[tid] : "?";
+            return '<option value="' + tid + '">' + escapeHtml(t ? t.name : tid) + " ($" + bal + " left)</option>";
+          }).join("");
+          html += '<div class="bid-row">' +
+            '<select id="bidTeamSelect">' + teamOptions + "</select>" +
+            '<input id="bidAmountInput" type="number" min="' + (openNom.current_bid + 1) + '" step="1" placeholder="$' + (openNom.current_bid + 1) + '+">' +
+            '<button class="place-bid-btn" data-draft-id="' + d.id +
+              '" data-nomination-id="' + openNom.id +
+              '" data-current-bid="' + openNom.current_bid +
+              '" data-current-bid-team-id="' + (openNom.current_bid_team_id || "") + '">Place Bid</button>' +
+          "</div>";
+        }
+
+        if (isCommissioner && openNom.current_bid_team_id) {
+          html += '<button class="sell-nomination-btn" data-draft-id="' + d.id +
+            '" data-nomination-id="' + openNom.id +
+            '" data-player-id="' + openNom.player_id +
+            '" data-team-id="' + openNom.current_bid_team_id +
+            '" data-amount="' + openNom.current_bid +
+            '" data-nomination-number="' + openNom.nomination_number +
+            '" data-team-count="' + teamCount + '">Sell to ' + escapeHtml(bidTeamName) + "</button>";
+        }
+      } else {
+        const nextNominationNumber = (d.nominations || []).length + 1;
+        const position = ((nextNominationNumber - 1) % teamCount) + 1;
+        const slot = d.draft_order.find((o) => o.pick_position === position);
+        const teamName = slot && slot.teams ? slot.teams.name : "Unknown team";
+        const turnGmName = slot && slot.teams && slot.teams.gms ? slot.teams.gms.name : "";
+        const isMyTurn = !!slot && (isCommissioner || myTeamIds.indexOf(slot.team_id) !== -1);
+
+        html += '<div class="on-clock' + (isMyTurn ? " mine" : "") + '">' +
+          "Nominate — <strong>" + escapeHtml(teamName) + "</strong>" +
+          (turnGmName ? " (" + escapeHtml(turnGmName) + ")" : "") +
+          (isMyTurn ? ' <span class="you-badge">Your turn to nominate</span>' : "") +
+        "</div>";
+
+        if (isMyTurn && slot) {
+          const soldIds = new Set(picks.map((p) => p.player_id));
+          const available = allPlayers.filter((p) => !soldIds.has(p.id));
+          html += '<div class="available-players">' +
+            (available.length === 0
+              ? '<div class="league-loading">No players left in the pool.</div>'
+              : available.map((p) =>
+                  '<div class="available-player-row">' +
+                    "<span>" + escapeHtml(p.name) + (p.position ? ' <span class="pos">' + escapeHtml(p.position) + "</span>" : "") + "</span>" +
+                    '<button class="nominate-player-btn" data-draft-id="' + d.id +
+                      '" data-team-id="' + slot.team_id +
+                      '" data-nomination-number="' + nextNominationNumber +
+                      '" data-player-id="' + p.id + '">Nominate</button>' +
+                  "</div>"
+                ).join("")
+            ) +
+          "</div>";
+        }
+      }
+    }
+
+    html += '<div class="pick-history">' +
+      '<div class="pick-history-title">Budgets</div>' +
+      d.draft_order.map((o) => {
+        const teamName = o.teams ? o.teams.name : "Unknown team";
+        const bal = budgets[o.team_id] !== undefined ? budgets[o.team_id] : d.starting_budget;
+        return '<div class="pick-history-row"><span>$' + bal + "</span><span>" + escapeHtml(teamName) + "</span></div>";
+      }).join("") +
+    "</div>";
+
+    if (picks.length > 0) {
+      html += '<div class="pick-history">' +
+        '<div class="pick-history-title">Sold so far</div>' +
+        picks.slice().sort((a, b) => b.pick_number - a.pick_number).map((p) => {
+          const teamName = p.teams ? p.teams.name : "";
+          const playerName = p.players ? p.players.name : "";
+          return '<div class="pick-history-row"><span>$' + (p.amount_paid || 0) + "</span><span>" +
+            escapeHtml(playerName) + "</span><span>" + escapeHtml(teamName) + "</span></div>";
+        }).join("") +
+      "</div>";
+    }
+
+    return html;
+  }
+
   async function loadDrafts() {
     draftsSection.innerHTML = '<div class="league-loading">Loading drafts…</div>';
     const { data, error } = await sb
       .from("drafts")
-      .select("id, label, format, status, rounds, starting_budget, created_at, draft_order(pick_position, teams(name, gms(name)))")
+      .select(
+        "id, label, format, status, rounds, starting_budget, created_at, " +
+        "draft_order(pick_position, team_id, teams(name, gms(name))), " +
+        "picks(pick_number, round, team_id, player_id, amount_paid, teams(name), players(name, position)), " +
+        "nominations(id, nomination_number, player_id, status, current_bid, current_bid_team_id, " +
+          "players(name, position), " +
+          "bidder:teams!current_bid_team_id(name, gms(name)))"
+      )
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -491,15 +879,26 @@
         : (d.starting_budget ? "$" + d.starting_budget + " budget" : "budget not set");
 
       const order = (d.draft_order || []).slice().sort((a, b) => a.pick_position - b.pick_position);
-      const pickOrderHtml = order.length === 0
-        ? ""
-        : '<ol class="pick-order-list">' +
-            order.map((o) => {
-              const teamName = o.teams ? o.teams.name : "Unknown team";
-              const gmName = o.teams && o.teams.gms ? o.teams.gms.name : "";
-              return "<li>" + escapeHtml(teamName) + (gmName ? " (" + escapeHtml(gmName) + ")" : "") + "</li>";
-            }).join("") +
-          "</ol>";
+      d.draft_order = order;
+
+      let bodyHtml;
+      if (d.status === "in_progress") {
+        bodyHtml = d.format === "snake" ? renderSnakeBoard(d) : renderAuctionBoard(d);
+      } else {
+        const pickOrderHtml = order.length === 0
+          ? ""
+          : '<ol class="pick-order-list">' +
+              order.map((o) => {
+                const teamName = o.teams ? o.teams.name : "Unknown team";
+                const teamGmName = o.teams && o.teams.gms ? o.teams.gms.name : "";
+                return "<li>" + escapeHtml(teamName) + (teamGmName ? " (" + escapeHtml(teamGmName) + ")" : "") + "</li>";
+              }).join("") +
+            "</ol>";
+        const startBtnHtml = (isCommissioner && d.status === "setup")
+          ? '<button class="start-draft-btn" data-draft-id="' + d.id + '">Start Draft</button>'
+          : "";
+        bodyHtml = pickOrderHtml + startBtnHtml;
+      }
 
       return (
         '<div class="draft-card">' +
@@ -509,7 +908,7 @@
             "<span>" + escapeHtml(d.format) + "</span>" +
             "<span>" + escapeHtml(configText) + "</span>" +
           "</div>" +
-          pickOrderHtml +
+          bodyHtml +
         "</div>"
       );
     }).join("");
@@ -517,14 +916,17 @@
 
   let currentUser = null;
 
-  function renderSignedIn(user) {
+  async function renderSignedIn(user) {
     currentUser = user;
     loginView.style.display = "none";
     appView.style.display = "block";
     gmName.textContent = displayNameFor(user);
     gmEmail.textContent = user.email;
-    loadLeague(user);
-    loadDrafts();
+    // League and players must be loaded before drafts, since the live board
+    // needs isCommissioner/myTeamIds and the player pool to render correctly.
+    await Promise.all([loadLeague(user), loadPlayers()]);
+    await loadDrafts();
+    subscribeToPicks();
   }
 
   function renderSignedOut() {
@@ -533,6 +935,28 @@
     loginMsg.className = "msg";
     emailInput.value = "";
     passwordInput.value = "";
+    if (picksChannel) {
+      sb.removeChannel(picksChannel);
+      picksChannel = null;
+    }
+  }
+
+  function subscribeToPicks() {
+    if (picksChannel) {
+      sb.removeChannel(picksChannel);
+    }
+    picksChannel = sb
+      .channel("picks-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "picks" }, () => {
+        loadDrafts();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "nominations" }, () => {
+        loadDrafts();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "drafts" }, () => {
+        loadDrafts();
+      })
+      .subscribe();
   }
 
   async function init() {
@@ -593,7 +1017,7 @@
     selectedFormat = "snake";
     formatSnakeBtn.classList.add("active");
     formatAuctionBtn.classList.remove("active");
-    snakeFields.style.display = "block";
+    draftRoundsLabel.textContent = "Rounds per team";
     auctionFields.style.display = "none";
   });
 
@@ -601,22 +1025,21 @@
     selectedFormat = "auction";
     formatAuctionBtn.classList.add("active");
     formatSnakeBtn.classList.remove("active");
+    draftRoundsLabel.textContent = "Roster size per team (# of players)";
     auctionFields.style.display = "block";
-    snakeFields.style.display = "none";
   });
 
   createDraftBtn.addEventListener("click", async () => {
     const label = draftLabelInput.value.trim();
-    let rounds = null;
     let startingBudget = null;
 
-    if (selectedFormat === "snake") {
-      rounds = parseInt(draftRoundsInput.value, 10);
-      if (!rounds || rounds < 1) {
-        showDraftMsg("Enter a valid number of rounds.", "error");
-        return;
-      }
-    } else {
+    const rounds = parseInt(draftRoundsInput.value, 10);
+    if (!rounds || rounds < 1) {
+      showDraftMsg("Enter a valid roster size.", "error");
+      return;
+    }
+
+    if (selectedFormat === "auction") {
       startingBudget = parseFloat(draftBudgetInput.value);
       if (!startingBudget || startingBudget <= 0) {
         showDraftMsg("Enter a valid starting budget.", "error");
@@ -674,6 +1097,154 @@
     draftRoundsInput.value = "";
     draftBudgetInput.value = "";
     loadDrafts();
+  });
+
+  draftsSection.addEventListener("click", async (e) => {
+    const startBtn = e.target.closest(".start-draft-btn");
+    if (startBtn) {
+      startBtn.disabled = true;
+      startBtn.textContent = "Starting…";
+      const { error } = await sb
+        .from("drafts")
+        .update({ status: "in_progress", started_at: new Date().toISOString() })
+        .eq("id", startBtn.dataset.draftId);
+      if (error) {
+        alert("Could not start draft: " + error.message);
+      }
+      loadDrafts();
+      return;
+    }
+
+    const draftBtn = e.target.closest(".draft-player-btn");
+    if (draftBtn) {
+      draftBtn.disabled = true;
+      draftBtn.textContent = "Drafting…";
+      const { error } = await sb.from("picks").insert({
+        draft_id: draftBtn.dataset.draftId,
+        team_id: draftBtn.dataset.teamId,
+        player_id: draftBtn.dataset.playerId,
+        pick_number: parseInt(draftBtn.dataset.pickNumber, 10),
+        round: parseInt(draftBtn.dataset.round, 10),
+      });
+      if (error) {
+        alert("Could not record pick: " + error.message);
+      }
+      loadDrafts();
+      return;
+    }
+
+    const nominateBtn = e.target.closest(".nominate-player-btn");
+    if (nominateBtn) {
+      nominateBtn.disabled = true;
+      nominateBtn.textContent = "Nominating…";
+      const { error } = await sb.from("nominations").insert({
+        draft_id: nominateBtn.dataset.draftId,
+        nomination_number: parseInt(nominateBtn.dataset.nominationNumber, 10),
+        player_id: nominateBtn.dataset.playerId,
+        nominated_by_team_id: nominateBtn.dataset.teamId,
+        current_bid: 1,
+        current_bid_team_id: nominateBtn.dataset.teamId,
+        status: "open",
+      });
+      if (error) {
+        alert("Could not nominate player: " + error.message);
+      }
+      loadDrafts();
+      return;
+    }
+
+    const bidBtn = e.target.closest(".place-bid-btn");
+    if (bidBtn) {
+      const teamSelect = document.getElementById("bidTeamSelect");
+      const amountInput = document.getElementById("bidAmountInput");
+      const currentBid = parseFloat(bidBtn.dataset.currentBid);
+      const amount = parseFloat(amountInput.value);
+
+      if (!amount || amount <= currentBid) {
+        alert("Bid must be higher than the current bid of $" + currentBid + ".");
+        return;
+      }
+      if (teamSelect.value === bidBtn.dataset.currentBidTeamId) {
+        alert("That team already has the highest bid — pick a different team, or wait for someone else to bid.");
+        return;
+      }
+
+      bidBtn.disabled = true;
+      bidBtn.textContent = "Bidding…";
+      const { data, error } = await sb
+        .from("nominations")
+        .update({ current_bid: amount, current_bid_team_id: teamSelect.value })
+        .eq("id", bidBtn.dataset.nominationId)
+        .eq("current_bid", currentBid)
+        .select();
+
+      if (error) {
+        alert("Could not place bid: " + error.message);
+      } else if (!data || data.length === 0) {
+        alert("Someone else just bid first — refreshing with the latest bid.");
+      }
+      loadDrafts();
+      return;
+    }
+
+    const sellBtn = e.target.closest(".sell-nomination-btn");
+    if (sellBtn) {
+      sellBtn.disabled = true;
+      sellBtn.textContent = "Selling…";
+      const teamCount = parseInt(sellBtn.dataset.teamCount, 10);
+      const nominationNumber = parseInt(sellBtn.dataset.nominationNumber, 10);
+      const round = Math.ceil(nominationNumber / teamCount);
+
+      const { error: nomError } = await sb
+        .from("nominations")
+        .update({ status: "sold", resolved_at: new Date().toISOString() })
+        .eq("id", sellBtn.dataset.nominationId);
+
+      if (nomError) {
+        alert("Could not close nomination: " + nomError.message);
+        loadDrafts();
+        return;
+      }
+
+      const { error: pickError } = await sb.from("picks").insert({
+        draft_id: sellBtn.dataset.draftId,
+        pick_number: nominationNumber,
+        round: round,
+        team_id: sellBtn.dataset.teamId,
+        player_id: sellBtn.dataset.playerId,
+        amount_paid: parseFloat(sellBtn.dataset.amount),
+      });
+
+      if (pickError) {
+        alert("Nomination closed, but recording the pick failed: " + pickError.message);
+      }
+      loadDrafts();
+    }
+  });
+
+  addPlayerBtn.addEventListener("click", async () => {
+    const name = newPlayerName.value.trim();
+    if (!name) {
+      showPlayerMsg("Enter a player name.", "error");
+      return;
+    }
+    const position = newPlayerPosition.value || null;
+
+    addPlayerBtn.disabled = true;
+    addPlayerBtn.textContent = "Adding…";
+    const { error } = await sb.from("players").insert({ name, position });
+    addPlayerBtn.disabled = false;
+    addPlayerBtn.textContent = "Add Player";
+
+    if (error) {
+      showPlayerMsg("Could not add player: " + error.message, "error");
+      return;
+    }
+
+    newPlayerName.value = "";
+    newPlayerPosition.value = "";
+    showPlayerMsg("Player added!", "success");
+    loadPlayers();
   });
 
   init();
