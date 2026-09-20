@@ -23,12 +23,12 @@
     margin: 0;
     min-height: 100vh;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     background: var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    padding: 16px;
+    padding: 48px 16px;
   }
   .card {
     width: 100%;
@@ -112,22 +112,66 @@
     display: flex;
     align-items: center;
   }
-  .welcome {
-    text-align: center;
-  }
-  .welcome .name {
-    font-size: 24px;
-    font-weight: 700;
-    margin: 8px 0 4px;
-  }
-  .welcome .email {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 20px;
-  }
   #loginView, #appView { display: none; }
+  .app-header {
+    margin-bottom: 16px;
+  }
+  .app-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .conn-badge {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .header-logout {
+    width: auto;
+    padding: 7px 14px;
+    font-size: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .header-logout:hover { background: var(--border); }
+  .app-header-user {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .app-header-user .name {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .app-header-user .email {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    margin: 0 0 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    flex: 1;
+    width: auto;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    color: var(--muted);
+    padding: 10px 4px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .tab-btn:hover { background: transparent; color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
   .league {
-    margin: 4px 0 20px;
+    margin: 0;
   }
   .league-loading, .league-error {
     font-size: 13px;
@@ -429,64 +473,79 @@
   </div>
 
   <div id="appView">
-    <div class="welcome">
-      <div style="font-size:13px;color:var(--muted);">✅ Connected to Supabase</div>
-      <div class="name" id="gmName">—</div>
-      <div class="email" id="gmEmail">—</div>
-    </div>
-    <div id="leagueSection" class="league"></div>
-
-    <div class="section-title">Player Pool</div>
-    <div id="playersSection" class="players"></div>
-
-    <div id="playerAddSection" style="display:none;">
-      <div class="add-player-row">
-        <input id="newPlayerName" type="text" placeholder="Player name">
-        <select id="newPlayerPosition">
-          <option value="">Position (optional)</option>
-          <option value="PG">PG</option>
-          <option value="SG">SG</option>
-          <option value="SF">SF</option>
-          <option value="PF">PF</option>
-          <option value="C">C</option>
-        </select>
-        <button id="addPlayerBtn">Add Player</button>
+    <div class="app-header">
+      <div class="app-header-top">
+        <span class="conn-badge">✅ Connected</span>
+        <button id="logoutBtn" class="header-logout">Sign Out</button>
       </div>
-      <div id="playerMsg" class="msg"></div>
+      <div class="app-header-user">
+        <span class="name" id="gmName">—</span>
+        <span class="email" id="gmEmail">—</span>
+      </div>
     </div>
 
-    <div class="section-title">Drafts</div>
-    <div id="draftsSection" class="drafts"></div>
-
-    <div id="draftSetupSection" style="display:none;">
-      <div class="section-title">Create a New Draft</div>
-
-      <label for="draftLabel">Label (optional)</label>
-      <input id="draftLabel" type="text" placeholder="e.g. 2026 Season Draft">
-
-      <label>Format</label>
-      <div class="format-toggle">
-        <button type="button" id="formatSnakeBtn" class="format-btn active">Snake</button>
-        <button type="button" id="formatAuctionBtn" class="format-btn">Auction</button>
-      </div>
-
-      <label for="draftRounds" id="draftRoundsLabel">Rounds per team</label>
-      <input id="draftRounds" type="number" min="1" step="1" placeholder="e.g. 13">
-
-      <div id="auctionFields" style="display:none;">
-        <label for="draftBudget">Starting budget per team ($)</label>
-        <input id="draftBudget" type="number" min="1" step="1" placeholder="e.g. 200">
-      </div>
-
-      <label>Pick Order</label>
-      <div class="field-hint">For snake drafts, this is the pick order (round 1 goes Pick 1 → Pick 8, even rounds reverse automatically). For auction drafts, this is the nomination turn order instead.</div>
-      <div id="orderRows" class="order-rows"></div>
-
-      <button id="createDraftBtn">Create Draft</button>
-      <div id="draftMsg" class="msg"></div>
+    <div class="tab-bar">
+      <button type="button" class="tab-btn active" data-tab="drafts">Drafts</button>
+      <button type="button" class="tab-btn" data-tab="players">Players</button>
+      <button type="button" class="tab-btn" data-tab="league">League</button>
     </div>
 
-    <button id="logoutBtn" class="secondary">Sign Out</button>
+    <div id="tab-drafts" class="tab-panel active">
+      <div id="draftsSection" class="drafts"></div>
+
+      <div id="draftSetupSection" style="display:none;">
+        <div class="section-title">Create a New Draft</div>
+
+        <label for="draftLabel">Label (optional)</label>
+        <input id="draftLabel" type="text" placeholder="e.g. 2026 Season Draft">
+
+        <label>Format</label>
+        <div class="format-toggle">
+          <button type="button" id="formatSnakeBtn" class="format-btn active">Snake</button>
+          <button type="button" id="formatAuctionBtn" class="format-btn">Auction</button>
+        </div>
+
+        <label for="draftRounds" id="draftRoundsLabel">Rounds per team</label>
+        <input id="draftRounds" type="number" min="1" step="1" placeholder="e.g. 13">
+
+        <div id="auctionFields" style="display:none;">
+          <label for="draftBudget">Starting budget per team ($)</label>
+          <input id="draftBudget" type="number" min="1" step="1" placeholder="e.g. 200">
+        </div>
+
+        <label>Pick Order</label>
+        <div class="field-hint">For snake drafts, this is the pick order (round 1 goes Pick 1 → Pick 8, even rounds reverse automatically). For auction drafts, this is the nomination turn order instead.</div>
+        <div id="orderRows" class="order-rows"></div>
+
+        <button id="createDraftBtn">Create Draft</button>
+        <div id="draftMsg" class="msg"></div>
+      </div>
+    </div>
+
+    <div id="tab-players" class="tab-panel">
+      <div id="playersSection" class="players"></div>
+
+      <div id="playerAddSection" style="display:none;">
+        <div class="section-title">Add a Player</div>
+        <div class="add-player-row">
+          <input id="newPlayerName" type="text" placeholder="Player name">
+          <select id="newPlayerPosition">
+            <option value="">Position (optional)</option>
+            <option value="PG">PG</option>
+            <option value="SG">SG</option>
+            <option value="SF">SF</option>
+            <option value="PF">PF</option>
+            <option value="C">C</option>
+          </select>
+          <button id="addPlayerBtn">Add Player</button>
+        </div>
+        <div id="playerMsg" class="msg"></div>
+      </div>
+    </div>
+
+    <div id="tab-league" class="tab-panel">
+      <div id="leagueSection" class="league"></div>
+    </div>
   </div>
 </div>
 
@@ -533,6 +592,17 @@
   const newPlayerPosition = document.getElementById("newPlayerPosition");
   const addPlayerBtn = document.getElementById("addPlayerBtn");
   const playerMsg = document.getElementById("playerMsg");
+  const tabBtns = document.querySelectorAll(".tab-btn");
+  const tabPanels = document.querySelectorAll(".tab-panel");
+
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      tabBtns.forEach((b) => b.classList.remove("active"));
+      tabPanels.forEach((p) => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+    });
+  });
 
   let allTeams = [];
   let allPlayers = [];
