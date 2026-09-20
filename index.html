@@ -209,6 +209,15 @@
     flex-wrap: wrap;
     align-items: center;
   }
+  .pick-order-list {
+    margin: 10px 0 0;
+    padding-left: 20px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .pick-order-list li {
+    padding: 3px 0;
+  }
   .status-pill {
     font-size: 10px;
     font-weight: 700;
@@ -463,7 +472,7 @@
     draftsSection.innerHTML = '<div class="league-loading">Loading drafts…</div>';
     const { data, error } = await sb
       .from("drafts")
-      .select("id, label, format, status, rounds, starting_budget, created_at")
+      .select("id, label, format, status, rounds, starting_budget, created_at, draft_order(pick_position, teams(name, gms(name)))")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -480,6 +489,18 @@
       const configText = d.format === "snake"
         ? (d.rounds ? d.rounds + " rounds" : "rounds not set")
         : (d.starting_budget ? "$" + d.starting_budget + " budget" : "budget not set");
+
+      const order = (d.draft_order || []).slice().sort((a, b) => a.pick_position - b.pick_position);
+      const pickOrderHtml = order.length === 0
+        ? ""
+        : '<ol class="pick-order-list">' +
+            order.map((o) => {
+              const teamName = o.teams ? o.teams.name : "Unknown team";
+              const gmName = o.teams && o.teams.gms ? o.teams.gms.name : "";
+              return "<li>" + escapeHtml(teamName) + (gmName ? " (" + escapeHtml(gmName) + ")" : "") + "</li>";
+            }).join("") +
+          "</ol>";
+
       return (
         '<div class="draft-card">' +
           '<div class="draft-label">' + escapeHtml(d.label || "Untitled Draft") + "</div>" +
@@ -488,6 +509,7 @@
             "<span>" + escapeHtml(d.format) + "</span>" +
             "<span>" + escapeHtml(configText) + "</span>" +
           "</div>" +
+          pickOrderHtml +
         "</div>"
       );
     }).join("");
