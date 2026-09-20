@@ -32,7 +32,7 @@
   }
   .card {
     width: 100%;
-    max-width: 380px;
+    max-width: 460px;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -126,6 +126,47 @@
     margin-bottom: 20px;
   }
   #loginView, #appView { display: none; }
+  .league {
+    margin: 4px 0 20px;
+  }
+  .league-loading, .league-error {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    padding: 12px 0;
+  }
+  .gm-block {
+    margin-bottom: 14px;
+  }
+  .gm-header {
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .gm-block.you .gm-header { color: var(--accent); }
+  .you-badge {
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--accent);
+    color: white;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+  .team-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .team-list li {
+    font-size: 13px;
+    color: var(--muted);
+    padding: 5px 0 5px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .team-list li:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
@@ -156,8 +197,9 @@
       <div style="font-size:13px;color:var(--muted);">✅ Connected to Supabase</div>
       <div class="name" id="gmName">—</div>
       <div class="email" id="gmEmail">—</div>
-      <button id="logoutBtn" class="secondary">Sign Out</button>
     </div>
+    <div id="leagueSection" class="league"></div>
+    <button id="logoutBtn" class="secondary">Sign Out</button>
   </div>
 </div>
 
@@ -185,6 +227,7 @@
   const passwordInput = document.getElementById("password");
   const gmName = document.getElementById("gmName");
   const gmEmail = document.getElementById("gmEmail");
+  const leagueSection = document.getElementById("leagueSection");
 
   function showMsg(text, type) {
     loginMsg.textContent = text;
@@ -195,11 +238,46 @@
     return GM_NAMES[user.email] || user.email;
   }
 
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  async function loadLeague(user) {
+    leagueSection.innerHTML = '<div class="league-loading">Loading league…</div>';
+    const { data, error } = await sb
+      .from("gms")
+      .select("id, name, teams(id, name)")
+      .order("name");
+
+    if (error) {
+      leagueSection.innerHTML = '<div class="league-error">Could not load league: ' + escapeHtml(error.message) + '</div>';
+      return;
+    }
+
+    leagueSection.innerHTML = data.map((gm) => {
+      const isYou = gm.id === user.id;
+      const teams = (gm.teams || [])
+        .map((t) => "<li>" + escapeHtml(t.name) + "</li>")
+        .join("");
+      return (
+        '<div class="gm-block' + (isYou ? " you" : "") + '">' +
+          '<div class="gm-header">' + escapeHtml(gm.name) +
+            (isYou ? ' <span class="you-badge">You</span>' : "") +
+          "</div>" +
+          '<ul class="team-list">' + teams + "</ul>" +
+        "</div>"
+      );
+    }).join("");
+  }
+
   function renderSignedIn(user) {
     loginView.style.display = "none";
     appView.style.display = "block";
     gmName.textContent = displayNameFor(user);
     gmEmail.textContent = user.email;
+    loadLeague(user);
   }
 
   function renderSignedOut() {
