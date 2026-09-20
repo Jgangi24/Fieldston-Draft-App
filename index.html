@@ -32,7 +32,7 @@
   }
   .card {
     width: 100%;
-    max-width: 460px;
+    max-width: 560px;
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -167,6 +167,104 @@
     border-bottom: 1px solid var(--border);
   }
   .team-list li:last-child { border-bottom: none; }
+  select {
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    background: #0f1115;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+  }
+  select:focus { outline: none; border-color: var(--accent); }
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin: 0 0 12px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .drafts:empty { display: none; }
+  .draft-card {
+    background: #0f1115;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .draft-card .draft-label {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .draft-card .draft-meta {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .status-pill {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--border);
+    color: var(--text);
+  }
+  .status-pill.setup { background: rgba(79,140,255,0.18); color: var(--accent); }
+  .status-pill.in_progress { background: rgba(79,219,138,0.18); color: var(--success); }
+  .status-pill.paused { background: rgba(255,107,107,0.1); color: var(--error); }
+  .status-pill.completed { background: var(--border); color: var(--muted); }
+  .status-pill.cancelled { background: rgba(255,107,107,0.18); color: var(--error); }
+  .format-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .format-btn {
+    flex: 1;
+    padding: 9px;
+    background: #0f1115;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .format-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .field-hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin: -4px 0 16px;
+  }
+  .order-rows {
+    margin-bottom: 16px;
+  }
+  .order-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .order-row .pick-label {
+    font-size: 12px;
+    color: var(--muted);
+    width: 52px;
+    flex-shrink: 0;
+  }
+  .order-row select { margin-bottom: 0; }
 </style>
 </head>
 <body>
@@ -199,6 +297,40 @@
       <div class="email" id="gmEmail">—</div>
     </div>
     <div id="leagueSection" class="league"></div>
+
+    <div class="section-title">Drafts</div>
+    <div id="draftsSection" class="drafts"></div>
+
+    <div id="draftSetupSection" style="display:none;">
+      <div class="section-title">Create a New Draft</div>
+
+      <label for="draftLabel">Label (optional)</label>
+      <input id="draftLabel" type="text" placeholder="e.g. 2026 Season Draft">
+
+      <label>Format</label>
+      <div class="format-toggle">
+        <button type="button" id="formatSnakeBtn" class="format-btn active">Snake</button>
+        <button type="button" id="formatAuctionBtn" class="format-btn">Auction</button>
+      </div>
+
+      <div id="snakeFields">
+        <label for="draftRounds">Rounds per team</label>
+        <input id="draftRounds" type="number" min="1" step="1" placeholder="e.g. 13">
+      </div>
+
+      <div id="auctionFields" style="display:none;">
+        <label for="draftBudget">Starting budget per team ($)</label>
+        <input id="draftBudget" type="number" min="1" step="1" placeholder="e.g. 200">
+      </div>
+
+      <label>Pick Order</label>
+      <div class="field-hint">Round 1 goes Pick 1 → Pick 8. For snake drafts, even rounds reverse automatically.</div>
+      <div id="orderRows" class="order-rows"></div>
+
+      <button id="createDraftBtn">Create Draft</button>
+      <div id="draftMsg" class="msg"></div>
+    </div>
+
     <button id="logoutBtn" class="secondary">Sign Out</button>
   </div>
 </div>
@@ -228,10 +360,30 @@
   const gmName = document.getElementById("gmName");
   const gmEmail = document.getElementById("gmEmail");
   const leagueSection = document.getElementById("leagueSection");
+  const draftsSection = document.getElementById("draftsSection");
+  const draftSetupSection = document.getElementById("draftSetupSection");
+  const draftLabelInput = document.getElementById("draftLabel");
+  const formatSnakeBtn = document.getElementById("formatSnakeBtn");
+  const formatAuctionBtn = document.getElementById("formatAuctionBtn");
+  const snakeFields = document.getElementById("snakeFields");
+  const auctionFields = document.getElementById("auctionFields");
+  const draftRoundsInput = document.getElementById("draftRounds");
+  const draftBudgetInput = document.getElementById("draftBudget");
+  const orderRows = document.getElementById("orderRows");
+  const createDraftBtn = document.getElementById("createDraftBtn");
+  const draftMsg = document.getElementById("draftMsg");
+
+  let allTeams = [];
+  let selectedFormat = "snake";
 
   function showMsg(text, type) {
     loginMsg.textContent = text;
     loginMsg.className = "msg " + type;
+  }
+
+  function showDraftMsg(text, type) {
+    draftMsg.textContent = text;
+    draftMsg.className = "msg " + type;
   }
 
   function displayNameFor(user) {
@@ -248,7 +400,7 @@
     leagueSection.innerHTML = '<div class="league-loading">Loading league…</div>';
     const { data, error } = await sb
       .from("gms")
-      .select("id, name, teams(id, name)")
+      .select("id, name, is_commissioner, teams(id, name)")
       .order("name");
 
     if (error) {
@@ -270,14 +422,87 @@
         "</div>"
       );
     }).join("");
+
+    allTeams = [];
+    data.forEach((gm) => {
+      (gm.teams || []).forEach((t) => {
+        allTeams.push({ id: t.id, name: t.name, gmName: gm.name });
+      });
+    });
+
+    const me = data.find((gm) => gm.id === user.id);
+    const isCommissioner = !!(me && me.is_commissioner);
+    draftSetupSection.style.display = isCommissioner ? "block" : "none";
+    if (isCommissioner) buildOrderRows();
   }
 
+  function buildOrderRows() {
+    const options = allTeams
+      .map((t) => '<option value="' + t.id + '">' + escapeHtml(t.name) + " (" + escapeHtml(t.gmName) + ")</option>")
+      .join("");
+    orderRows.innerHTML = allTeams.map((_, i) => {
+      const pos = i + 1;
+      return (
+        '<div class="order-row">' +
+          '<span class="pick-label">Pick ' + pos + "</span>" +
+          '<select id="orderPos' + pos + '">' + options + "</select>" +
+        "</div>"
+      );
+    }).join("");
+    // Default each position to a different team so the selects start as a valid permutation.
+    allTeams.forEach((t, i) => {
+      document.getElementById("orderPos" + (i + 1)).value = t.id;
+    });
+  }
+
+  function statusLabel(status) {
+    return status.replace("_", " ");
+  }
+
+  async function loadDrafts() {
+    draftsSection.innerHTML = '<div class="league-loading">Loading drafts…</div>';
+    const { data, error } = await sb
+      .from("drafts")
+      .select("id, label, format, status, rounds, starting_budget, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      draftsSection.innerHTML = '<div class="league-error">Could not load drafts: ' + escapeHtml(error.message) + '</div>';
+      return;
+    }
+
+    if (data.length === 0) {
+      draftsSection.innerHTML = '<div class="league-loading">No drafts created yet.</div>';
+      return;
+    }
+
+    draftsSection.innerHTML = data.map((d) => {
+      const configText = d.format === "snake"
+        ? (d.rounds ? d.rounds + " rounds" : "rounds not set")
+        : (d.starting_budget ? "$" + d.starting_budget + " budget" : "budget not set");
+      return (
+        '<div class="draft-card">' +
+          '<div class="draft-label">' + escapeHtml(d.label || "Untitled Draft") + "</div>" +
+          '<div class="draft-meta">' +
+            '<span class="status-pill ' + d.status + '">' + escapeHtml(statusLabel(d.status)) + "</span>" +
+            "<span>" + escapeHtml(d.format) + "</span>" +
+            "<span>" + escapeHtml(configText) + "</span>" +
+          "</div>" +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  let currentUser = null;
+
   function renderSignedIn(user) {
+    currentUser = user;
     loginView.style.display = "none";
     appView.style.display = "block";
     gmName.textContent = displayNameFor(user);
     gmEmail.textContent = user.email;
     loadLeague(user);
+    loadDrafts();
   }
 
   function renderSignedOut() {
@@ -340,6 +565,93 @@
 
   logoutBtn.addEventListener("click", async () => {
     await sb.auth.signOut();
+  });
+
+  formatSnakeBtn.addEventListener("click", () => {
+    selectedFormat = "snake";
+    formatSnakeBtn.classList.add("active");
+    formatAuctionBtn.classList.remove("active");
+    snakeFields.style.display = "block";
+    auctionFields.style.display = "none";
+  });
+
+  formatAuctionBtn.addEventListener("click", () => {
+    selectedFormat = "auction";
+    formatAuctionBtn.classList.add("active");
+    formatSnakeBtn.classList.remove("active");
+    auctionFields.style.display = "block";
+    snakeFields.style.display = "none";
+  });
+
+  createDraftBtn.addEventListener("click", async () => {
+    const label = draftLabelInput.value.trim();
+    let rounds = null;
+    let startingBudget = null;
+
+    if (selectedFormat === "snake") {
+      rounds = parseInt(draftRoundsInput.value, 10);
+      if (!rounds || rounds < 1) {
+        showDraftMsg("Enter a valid number of rounds.", "error");
+        return;
+      }
+    } else {
+      startingBudget = parseFloat(draftBudgetInput.value);
+      if (!startingBudget || startingBudget <= 0) {
+        showDraftMsg("Enter a valid starting budget.", "error");
+        return;
+      }
+    }
+
+    const orderTeamIds = allTeams.map((_, i) => document.getElementById("orderPos" + (i + 1)).value);
+    const uniqueIds = new Set(orderTeamIds);
+    if (uniqueIds.size !== allTeams.length) {
+      showDraftMsg("Each team must be assigned to exactly one pick position — you have a duplicate.", "error");
+      return;
+    }
+
+    createDraftBtn.disabled = true;
+    createDraftBtn.textContent = "Creating…";
+
+    const { data: draft, error: draftError } = await sb
+      .from("drafts")
+      .insert({
+        label: label || null,
+        format: selectedFormat,
+        rounds: rounds,
+        starting_budget: startingBudget,
+        created_by: currentUser.id,
+      })
+      .select()
+      .single();
+
+    if (draftError) {
+      showDraftMsg("Could not create draft: " + draftError.message, "error");
+      createDraftBtn.disabled = false;
+      createDraftBtn.textContent = "Create Draft";
+      return;
+    }
+
+    const orderRowsPayload = orderTeamIds.map((teamId, i) => ({
+      draft_id: draft.id,
+      team_id: teamId,
+      pick_position: i + 1,
+    }));
+    const { error: orderError } = await sb.from("draft_order").insert(orderRowsPayload);
+
+    createDraftBtn.disabled = false;
+    createDraftBtn.textContent = "Create Draft";
+
+    if (orderError) {
+      showDraftMsg("Draft created, but pick order failed to save: " + orderError.message, "error");
+      loadDrafts();
+      return;
+    }
+
+    showDraftMsg("Draft created!", "success");
+    draftLabelInput.value = "";
+    draftRoundsInput.value = "";
+    draftBudgetInput.value = "";
+    loadDrafts();
   });
 
   init();
