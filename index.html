@@ -447,6 +447,47 @@
     margin-top: 8px;
     background: var(--success);
   }
+  .pick-timer {
+    display: inline-block;
+    margin-left: 8px;
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .pick-timer.overdue { color: var(--error); }
+  .timer-adjust {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+  }
+  .timer-seconds-input {
+    width: 56px;
+    margin-bottom: 0;
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+  .timer-seconds-save-btn {
+    width: auto;
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  .draft-card .toggle-details-btn,
+  .draft-card .start-draft-btn,
+  .draft-card .cancel-draft-btn {
+    width: auto;
+    margin-top: 10px;
+    margin-right: 8px;
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+  .draft-card .cancel-draft-btn {
+    color: var(--error);
+    border-color: rgba(255,107,107,0.4);
+  }
+  .draft-card .cancel-draft-btn:hover {
+    background: rgba(255,107,107,0.1);
+  }
 </style>
 </head>
 <body>
@@ -512,6 +553,9 @@
           <label for="draftBudget">Starting budget per team ($)</label>
           <input id="draftBudget" type="number" min="1" step="1" placeholder="e.g. 200">
         </div>
+
+        <label for="draftPickSeconds">Seconds per pick</label>
+        <input id="draftPickSeconds" type="number" min="10" step="5" value="90">
 
         <label>Pick Order</label>
         <div class="field-hint">For snake drafts, this is the pick order (round 1 goes Pick 1 → Pick 8, even rounds reverse automatically). For auction drafts, this is the nomination turn order instead.</div>
@@ -583,6 +627,7 @@
   const draftRoundsLabel = document.getElementById("draftRoundsLabel");
   const draftRoundsInput = document.getElementById("draftRounds");
   const draftBudgetInput = document.getElementById("draftBudget");
+  const draftPickSecondsInput = document.getElementById("draftPickSeconds");
   const orderRows = document.getElementById("orderRows");
   const createDraftBtn = document.getElementById("createDraftBtn");
   const draftMsg = document.getElementById("draftMsg");
@@ -610,6 +655,7 @@
   let isCommissioner = false;
   let myTeamIds = [];
   let picksChannel = null;
+  let expandedDraftIds = new Set();
 
   function showMsg(text, type) {
     loginMsg.textContent = text;
@@ -735,6 +781,47 @@
     return { round: round, slot: slot };
   }
 
+  function formatDuration(totalSeconds) {
+    const sign = totalSeconds < 0 ? "-" : "";
+    const abs = Math.abs(Math.round(totalSeconds));
+    const m = Math.floor(abs / 60);
+    const s = abs % 60;
+    return sign + m + ":" + String(s).padStart(2, "0");
+  }
+
+  // Renders the countdown span (updated every second by updatePickTimers,
+  // purely client-side from the stored deadline — no re-fetch needed) plus,
+  // for the commissioner only, a small inline control to change the pick
+  // length mid-draft.
+  function renderTimerControl(d, baseTimeIso) {
+    if (!baseTimeIso) return "";
+    const deadlineIso = new Date(new Date(baseTimeIso).getTime() + (d.pick_time_seconds || 90) * 1000).toISOString();
+    let html = ' <span class="pick-timer" data-deadline="' + deadlineIso + '"></span>';
+    if (isCommissioner) {
+      html += '<span class="timer-adjust">' +
+        '<input type="number" min="10" step="5" class="timer-seconds-input" id="timerSeconds-' + d.id + '" value="' + (d.pick_time_seconds || 90) + '">' +
+        '<button class="timer-seconds-save-btn" data-draft-id="' + d.id + '">Set</button>' +
+      "</span>";
+    }
+    return html;
+  }
+
+  function updatePickTimers() {
+    document.querySelectorAll(".pick-timer").forEach((el) => {
+      const deadline = new Date(el.dataset.deadline).getTime();
+      const remaining = (deadline - Date.now()) / 1000;
+      if (remaining >= 0) {
+        el.textContent = formatDuration(remaining) + " left";
+        el.classList.remove("overdue");
+      } else {
+        el.textContent = "Overdue by " + formatDuration(remaining).replace("-", "");
+        el.classList.add("overdue");
+      }
+    });
+  }
+
+  setInterval(updatePickTimers, 1000);
+
   function renderSnakeBoard(d) {
     const teamCount = d.draft_order.length;
     const picks = (d.picks || []).slice().sort((a, b) => a.pick_number - b.pick_number);
@@ -750,11 +837,14 @@
       const teamName = turn.slot && turn.slot.teams ? turn.slot.teams.name : "Unknown team";
       const turnGmName = turn.slot && turn.slot.teams && turn.slot.teams.gms ? turn.slot.teams.gms.name : "";
       const isMyTurn = !!turn.slot && (isCommissioner || myTeamIds.indexOf(turn.slot.team_id) !== -1);
+      const lastPick = picks.length > 0 ? picks[picks.length - 1] : null;
+      const baseTime = lastPick ? lastPick.picked_at : d.started_at;
 
       html += '<div class="on-clock' + (isMyTurn ? " mine" : "") + '">' +
         "Round " + turn.round + " · Pick " + nextPickNumber + " — <strong>" +
         escapeHtml(teamName) + "</strong>" + (turnGmName ? " (" + escapeHtml(turnGmName) + ")" : "") +
         (isMyTurn ? ' <span class="you-badge">On the clock</span>' : "") +
+        renderTimerControl(d, baseTime) +
       "</div>";
 
       if (isMyTurn && turn.slot) {
@@ -867,11 +957,16 @@
         const teamName = slot && slot.teams ? slot.teams.name : "Unknown team";
         const turnGmName = slot && slot.teams && slot.teams.gms ? slot.teams.gms.name : "";
         const isMyTurn = !!slot && (isCommissioner || myTeamIds.indexOf(slot.team_id) !== -1);
+        const soldNoms = (d.nominations || []).filter((n) => n.status === "sold")
+          .sort((a, b) => new Date(a.resolved_at) - new Date(b.resolved_at));
+        const lastSoldNom = soldNoms.length > 0 ? soldNoms[soldNoms.length - 1] : null;
+        const baseTime = lastSoldNom ? lastSoldNom.resolved_at : d.started_at;
 
         html += '<div class="on-clock' + (isMyTurn ? " mine" : "") + '">' +
           "Nominate — <strong>" + escapeHtml(teamName) + "</strong>" +
           (turnGmName ? " (" + escapeHtml(turnGmName) + ")" : "") +
           (isMyTurn ? ' <span class="you-badge">Your turn to nominate</span>' : "") +
+          renderTimerControl(d, baseTime) +
         "</div>";
 
         if (isMyTurn && slot) {
@@ -924,10 +1019,10 @@
     const { data, error } = await sb
       .from("drafts")
       .select(
-        "id, label, format, status, rounds, starting_budget, created_at, " +
+        "id, label, format, status, rounds, starting_budget, created_at, started_at, pick_time_seconds, " +
         "draft_order(pick_position, team_id, teams(name, gms(name))), " +
-        "picks(pick_number, round, team_id, player_id, amount_paid, teams(name), players(name, position)), " +
-        "nominations(id, nomination_number, player_id, status, current_bid, current_bid_team_id, " +
+        "picks(pick_number, round, team_id, player_id, amount_paid, picked_at, teams(name), players(name, position)), " +
+        "nominations(id, nomination_number, player_id, status, current_bid, current_bid_team_id, created_at, resolved_at, " +
           "players(name, position), " +
           "bidder:teams!current_bid_team_id(name, gms(name)))"
       )
@@ -951,11 +1046,19 @@
       const order = (d.draft_order || []).slice().sort((a, b) => a.pick_position - b.pick_position);
       d.draft_order = order;
 
+      const cancelBtnHtml = (isCommissioner && (d.status === "setup" || d.status === "in_progress"))
+        ? '<button class="cancel-draft-btn secondary" data-draft-id="' + d.id + '">Cancel Draft</button>'
+        : "";
+
       let bodyHtml;
       if (d.status === "in_progress") {
-        bodyHtml = d.format === "snake" ? renderSnakeBoard(d) : renderAuctionBoard(d);
+        bodyHtml = (d.format === "snake" ? renderSnakeBoard(d) : renderAuctionBoard(d)) + cancelBtnHtml;
       } else {
-        const pickOrderHtml = order.length === 0
+        // Setup/completed/cancelled drafts collapse to a summary by default —
+        // showing their full pick order for every old test draft was making
+        // the Drafts tab unwieldy to scroll through.
+        const isExpanded = expandedDraftIds.has(d.id);
+        const pickOrderHtml = order.length === 0 || !isExpanded
           ? ""
           : '<ol class="pick-order-list">' +
               order.map((o) => {
@@ -964,10 +1067,15 @@
                 return "<li>" + escapeHtml(teamName) + (teamGmName ? " (" + escapeHtml(teamGmName) + ")" : "") + "</li>";
               }).join("") +
             "</ol>";
+        const toggleBtnHtml = order.length === 0
+          ? ""
+          : '<button type="button" class="toggle-details-btn secondary" data-draft-id="' + d.id + '">' +
+              (isExpanded ? "Hide pick order" : "Show pick order") +
+            "</button>";
         const startBtnHtml = (isCommissioner && d.status === "setup")
           ? '<button class="start-draft-btn" data-draft-id="' + d.id + '">Start Draft</button>'
           : "";
-        bodyHtml = pickOrderHtml + startBtnHtml;
+        bodyHtml = toggleBtnHtml + pickOrderHtml + startBtnHtml + cancelBtnHtml;
       }
 
       return (
@@ -1117,6 +1225,12 @@
       }
     }
 
+    const pickTimeSeconds = parseInt(draftPickSecondsInput.value, 10);
+    if (!pickTimeSeconds || pickTimeSeconds < 10) {
+      showDraftMsg("Enter a valid number of seconds per pick (10 or more).", "error");
+      return;
+    }
+
     const orderTeamIds = allTeams.map((_, i) => document.getElementById("orderPos" + (i + 1)).value);
     const uniqueIds = new Set(orderTeamIds);
     if (uniqueIds.size !== allTeams.length) {
@@ -1134,6 +1248,7 @@
         format: selectedFormat,
         rounds: rounds,
         starting_budget: startingBudget,
+        pick_time_seconds: pickTimeSeconds,
         created_by: currentUser.id,
       })
       .select()
@@ -1287,6 +1402,54 @@
 
       if (pickError) {
         alert("Nomination closed, but recording the pick failed: " + pickError.message);
+      }
+      loadDrafts();
+      return;
+    }
+
+    const timerSaveBtn = e.target.closest(".timer-seconds-save-btn");
+    if (timerSaveBtn) {
+      const input = document.getElementById("timerSeconds-" + timerSaveBtn.dataset.draftId);
+      const seconds = parseInt(input.value, 10);
+      if (!seconds || seconds < 10) {
+        alert("Enter a valid number of seconds (10 or more).");
+        return;
+      }
+      timerSaveBtn.disabled = true;
+      const { error } = await sb
+        .from("drafts")
+        .update({ pick_time_seconds: seconds })
+        .eq("id", timerSaveBtn.dataset.draftId);
+      timerSaveBtn.disabled = false;
+      if (error) {
+        alert("Could not update pick timer: " + error.message);
+      }
+      loadDrafts();
+      return;
+    }
+
+    const toggleBtn = e.target.closest(".toggle-details-btn");
+    if (toggleBtn) {
+      const id = toggleBtn.dataset.draftId;
+      if (expandedDraftIds.has(id)) {
+        expandedDraftIds.delete(id);
+      } else {
+        expandedDraftIds.add(id);
+      }
+      loadDrafts();
+      return;
+    }
+
+    const cancelBtn = e.target.closest(".cancel-draft-btn");
+    if (cancelBtn) {
+      if (!confirm("Cancel this draft? This can't be undone.")) return;
+      cancelBtn.disabled = true;
+      const { error } = await sb
+        .from("drafts")
+        .update({ status: "cancelled" })
+        .eq("id", cancelBtn.dataset.draftId);
+      if (error) {
+        alert("Could not cancel draft: " + error.message);
       }
       loadDrafts();
     }
