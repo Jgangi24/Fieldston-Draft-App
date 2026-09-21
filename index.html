@@ -418,6 +418,13 @@
   .ratings-table th:hover { color: var(--text); }
   .ratings-table th.sort-active { color: var(--accent); }
   .ratings-table td.sort-active { color: var(--text); font-weight: 700; background: rgba(79,140,255,0.06); }
+  .dr-board-table th, .dr-board-table td { text-align: left; min-width: 92px; }
+  .dr-board-table th:first-child, .dr-board-table td:first-child { min-width: 28px; text-align: center; }
+  .dr-board-table td.dr-board-col-alt { background: rgba(255,255,255,0.08); }
+  .dr-board-table th.dr-board-col-alt { background: rgba(255,255,255,0.12); }
+  .dr-board-table td.dr-board-current,
+  .dr-board-table th.dr-board-current { background: rgba(79,140,255,0.14); }
+  .dr-board-price { display: block; color: var(--muted); font-size: 11px; }
   .ratings-table tbody tr:hover td { background: rgba(255,255,255,0.03); }
   .ratings-table tbody tr:hover td:first-child { background: var(--card); }
   .ratings-name-cell { font-weight: 600; }
@@ -1011,7 +1018,7 @@
     </div>
 
     <div id="dr-tab-board" class="dr-tab-panel">
-      <div class="league-loading">Draft board view is coming soon.</div>
+      <div id="drBoardSection"></div>
     </div>
 
     <div id="dr-tab-results" class="dr-tab-panel">
@@ -1151,6 +1158,7 @@
   const drPendingAssignment = document.getElementById("drPendingAssignment");
   const drPositionPills = document.getElementById("drPositionPills");
   const drPlayersSection = document.getElementById("drPlayersSection");
+  const drBoardSection = document.getElementById("drBoardSection");
   const drPicksSection = document.getElementById("drPicksSection");
   const drRosterTeamSelect = document.getElementById("drRosterTeamSelect");
   const drRosterListSection = document.getElementById("drRosterListSection");
@@ -1881,6 +1889,80 @@
       "</div>";
   }
 
+  // Grid view of the whole draft's shape: teams × rounds for snake, GMs ×
+  // nomination-rounds for salary cap (auction "round" is one cycle of the
+  // 4-GM rotation, not one pick per 8-team roster slot — same `round` value
+  // already stored on each pick, just laid out as a grid instead of a list).
+  // Column striping (alternating shade every other column) plus the
+  // current-turn highlight, combined into one class string — kept as a
+  // shared helper since both formats' grids need the same two flags.
+  function boardCellClass(colIndex, isCurrent) {
+    let cls = colIndex % 2 === 1 ? "dr-board-col-alt" : "";
+    if (isCurrent) cls = (cls + " dr-board-current").trim();
+    return cls;
+  }
+
+  function renderDrBoard(d) {
+    if (!d.rounds) {
+      drBoardSection.innerHTML = '<div class="league-loading">Set a number of rounds to see the board.</div>';
+      return;
+    }
+    const picks = d.picks || [];
+    const turn = getCurrentTurn(d);
+    const cols = d.draft_order;
+
+    if (d.format === "snake") {
+      const nextPickNumber = picks.length + 1;
+      const currentTurn = turn ? computeTurn(cols, cols.length, nextPickNumber) : null;
+
+      const headerCells = cols.map((o, i) =>
+        '<th class="' + boardCellClass(i, false) + '">' + escapeHtml(o.teams ? o.teams.name : "?") + "</th>"
+      ).join("");
+      let bodyRows = "";
+      for (let r = 1; r <= d.rounds; r++) {
+        const cells = cols.map((o, i) => {
+          const pick = picks.find((p) => p.team_id === o.team_id && p.round === r);
+          const isCurrent = !!currentTurn && turn.teamId === o.team_id && currentTurn.round === r;
+          const playerName = pick && pick.players ? pick.players.name : "";
+          const playerPos = pick && pick.players && pick.players.position ? pick.players.position : "";
+          const label = playerName ? escapeHtml(playerName) + (playerPos ? " (" + escapeHtml(playerPos) + ")" : "") : "";
+          return '<td class="' + boardCellClass(i, isCurrent) + '">' + label + "</td>";
+        }).join("");
+        bodyRows += "<tr><th>" + r + "</th>" + cells + "</tr>";
+      }
+      drBoardSection.innerHTML = '<div class="ratings-table-wrap"><table class="ratings-table dr-board-table">' +
+        "<thead><tr><th></th>" + headerCells + "</tr></thead><tbody>" + bodyRows + "</tbody></table></div>";
+      return;
+    }
+
+    const rotationSize = cols.length;
+    const totalTarget = draftTotalPicksTarget(d);
+    const maxRound = totalTarget ? Math.ceil(totalTarget / rotationSize) : 1;
+    const currentRound = Math.ceil(((d.nominations || []).length + 1) / rotationSize);
+
+    const headerCells = cols.map((o, i) => {
+      const gm = allGms.find((g) => g.id === o.gm_id);
+      return '<th class="' + boardCellClass(i, false) + '">' + escapeHtml(gm ? gm.name : "?") + "</th>";
+    }).join("");
+    let bodyRows = "";
+    for (let r = 1; r <= maxRound; r++) {
+      const cells = cols.map((o, i) => {
+        const pick = picks.find((p) => p.gm_id === o.gm_id && p.round === r);
+        const isCurrent = !!turn && turn.gmId === o.gm_id && currentRound === r;
+        const cellClass = boardCellClass(i, isCurrent);
+        if (!pick) return '<td class="' + cellClass + '"></td>';
+        const playerName = pick.players ? pick.players.name : "?";
+        const playerPos = pick.players && pick.players.position ? pick.players.position : "";
+        return '<td class="' + cellClass + '">' + escapeHtml(playerName) +
+          (playerPos ? " (" + escapeHtml(playerPos) + ")" : "") +
+          '<span class="dr-board-price">$' + (pick.amount_paid || 0) + "</span></td>";
+      }).join("");
+      bodyRows += "<tr><th>" + r + "</th>" + cells + "</tr>";
+    }
+    drBoardSection.innerHTML = '<div class="ratings-table-wrap"><table class="ratings-table dr-board-table">' +
+      "<thead><tr><th></th>" + headerCells + "</tr></thead><tbody>" + bodyRows + "</tbody></table></div>";
+  }
+
   function renderDrPicks(d) {
     const picks = (d.picks || []).slice().sort((a, b) => b.pick_number - a.pick_number);
     if (picks.length === 0) {
@@ -1998,6 +2080,7 @@
     renderDrStatusAndBanner(d);
     renderDrPendingAssignment(d);
     renderDrPlayers(d);
+    renderDrBoard(d);
     renderDrPicks(d);
     renderDrRosterList(d);
     renderDrSettingsPanel(d);
