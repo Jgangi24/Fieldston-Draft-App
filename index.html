@@ -337,6 +337,94 @@
     color: var(--muted);
     font-size: 11px;
   }
+  .player-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .position-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .position-pill {
+    width: auto;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 999px;
+  }
+  .position-pill:hover { background: var(--border); }
+  .position-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  .sort-hint {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .ratings-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-height: 480px;
+    overflow-y: auto;
+  }
+  /* In the draft room, the outer .dr-content is already the scroll
+     container — let the table grow to its natural height and fill the
+     available space instead of capping it and leaving empty background
+     below (which was the real "black box"). */
+  #drPlayersSection .ratings-table-wrap {
+    max-height: none;
+    overflow-y: visible;
+  }
+  .ratings-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .ratings-table th, .ratings-table td {
+    padding: 7px 9px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+  }
+  .ratings-table th:first-child, .ratings-table td:first-child {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    background: var(--card);
+  }
+  .ratings-table th {
+    position: sticky;
+    top: 0;
+    background: var(--card);
+    color: var(--muted);
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    z-index: 1;
+  }
+  .ratings-table th:first-child { z-index: 2; }
+  .ratings-table th:hover { color: var(--text); }
+  .ratings-table th.sort-active { color: var(--accent); }
+  .ratings-table td.sort-active { color: var(--text); font-weight: 700; background: rgba(79,140,255,0.06); }
+  .ratings-table tbody tr:hover td { background: rgba(255,255,255,0.03); }
+  .ratings-table tbody tr:hover td:first-child { background: var(--card); }
+  .ratings-name-cell { font-weight: 600; }
+  .ratings-table .draft-player-btn,
+  .ratings-table .nominate-player-btn {
+    width: auto;
+    padding: 5px 12px;
+    font-size: 11px;
+  }
   .add-player-row {
     display: flex;
     gap: 8px;
@@ -443,6 +531,39 @@
     flex-shrink: 0;
     padding: 10px 16px;
   }
+  .bid-stepper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    background: #0f1115;
+  }
+  .bid-step-btn {
+    width: 34px;
+    flex-shrink: 0;
+    padding: 8px 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .bid-step-btn:hover { background: var(--border); }
+  .bid-stepper input {
+    width: 60px;
+    text-align: center;
+    border: none;
+    background: transparent;
+    margin-bottom: 0;
+    padding: 8px 0;
+    -moz-appearance: textfield;
+  }
+  .bid-stepper input::-webkit-outer-spin-button,
+  .bid-stepper input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
   .sell-nomination-btn {
     margin-top: 8px;
     background: var(--success);
@@ -474,20 +595,272 @@
   }
   .draft-card .toggle-details-btn,
   .draft-card .start-draft-btn,
-  .draft-card .cancel-draft-btn {
+  .draft-card .cancel-draft-btn,
+  .draft-card .delete-draft-btn {
     width: auto;
     margin-top: 10px;
     margin-right: 8px;
     padding: 8px 14px;
     font-size: 12px;
   }
-  .draft-card .cancel-draft-btn {
+  .draft-card .cancel-draft-btn,
+  .draft-card .delete-draft-btn {
     color: var(--error);
     border-color: rgba(255,107,107,0.4);
   }
-  .draft-card .cancel-draft-btn:hover {
+  .draft-card .cancel-draft-btn:hover,
+  .draft-card .delete-draft-btn:hover {
     background: rgba(255,107,107,0.1);
   }
+  .draft-card .enter-draft-room-btn {
+    margin-top: 10px;
+  }
+
+  /* Draft Room: full-screen takeover while a draft is active */
+  .draft-room {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    color: var(--text);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .dr-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .dr-icon-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dr-icon-btn:hover { background: var(--border); }
+  .dr-status {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 0;
+  }
+  .dr-round-pick {
+    color: var(--muted);
+    font-weight: 400;
+    display: block;
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
+  .dr-settings-panel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    font-size: 13px;
+  }
+  .dr-settings-panel label { margin: 0; }
+  .dr-settings-panel input {
+    width: 70px;
+    margin-bottom: 0;
+  }
+  .dr-settings-panel button {
+    width: auto;
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+  .dr-team-strip {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .dr-team-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    width: 64px;
+    opacity: 0.55;
+  }
+  .dr-team-chip.current { opacity: 1; }
+  .dr-team-chip img, .dr-team-chip-fallback {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid transparent;
+    background: var(--card);
+  }
+  .dr-team-chip-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .dr-team-chip.current img, .dr-team-chip.current .dr-team-chip-fallback { border-color: var(--accent); }
+  .dr-team-name {
+    font-size: 10px;
+    text-align: center;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 64px;
+  }
+  .dr-team-chip.current .dr-team-name { color: var(--text); font-weight: 600; }
+  .dr-team-budget {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--success);
+  }
+  .dr-banner:empty { display: none; }
+  .dr-bid-banner {
+    margin: 10px 16px 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: rgba(79,140,255,0.1);
+    border: 1px solid var(--accent);
+    font-size: 13px;
+  }
+  .dr-bid-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .dr-bid-player {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+  .dr-bid-player .pos {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .dr-bid-ovr {
+    margin-left: 12px;
+  }
+  .dr-bid-current { text-align: right; }
+  .dr-bid-current-amount {
+    font-size: 20px;
+    font-weight: 800;
+  }
+  .dr-bid-current-team {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .dr-bid-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .dr-bid-bottom .place-bid-btn {
+    flex: 1;
+  }
+  .dr-bid-hint {
+    margin-top: 12px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .dr-bid-bottom-disabled { opacity: 0.45; }
+  .dr-bid-bottom-disabled button { cursor: default; }
+  .dr-assign-banner {
+    background: rgba(79,219,138,0.1);
+    border-color: var(--success);
+  }
+  .dr-assign-banner .assign-pick-team-btn {
+    background: var(--success);
+  }
+  .dr-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px 100px;
+  }
+  .dr-tab-panel { display: none; }
+  .dr-tab-panel.active { display: block; }
+  .dr-floating-panel {
+    background: rgba(255,255,255,0.10);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: 0 10px 28px -14px rgba(0,0,0,0.6);
+  }
+  .dr-sub-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .dr-sub-tab-btn {
+    flex: 1;
+    width: auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 9px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .dr-sub-tab-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .dr-sub-tab-panel { display: none; }
+  .dr-sub-tab-panel.active { display: block; }
+  #drRosterTeamSelect { margin-bottom: 12px; }
+  .dr-roster-progress {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .dr-nav {
+    position: fixed;
+    left: 50%;
+    bottom: 34px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    display: flex;
+    gap: 30px;
+    padding: 10px 24px;
+    z-index: 95;
+  }
+  .dr-tab-btn {
+    width: auto;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 2px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .dr-tab-btn svg { width: 23px; height: 23px; }
+  .dr-tab-btn.active { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -543,7 +916,7 @@
         <label>Format</label>
         <div class="format-toggle">
           <button type="button" id="formatSnakeBtn" class="format-btn active">Snake</button>
-          <button type="button" id="formatAuctionBtn" class="format-btn">Auction</button>
+          <button type="button" id="formatAuctionBtn" class="format-btn">Salary Cap</button>
         </div>
 
         <label for="draftRounds" id="draftRoundsLabel">Rounds per team</label>
@@ -558,7 +931,7 @@
         <input id="draftPickSeconds" type="number" min="10" step="5" value="90">
 
         <label>Pick Order</label>
-        <div class="field-hint">For snake drafts, this is the pick order (round 1 goes Pick 1 → Pick 8, even rounds reverse automatically). For auction drafts, this is the nomination turn order instead.</div>
+        <div class="field-hint">For snake drafts, this is the pick order (round 1 goes Pick 1 → Pick 8, even rounds reverse automatically). For salary cap drafts, this is the nomination turn order instead.</div>
         <div id="orderRows" class="order-rows"></div>
 
         <button id="createDraftBtn">Create Draft</button>
@@ -567,6 +940,10 @@
     </div>
 
     <div id="tab-players" class="tab-panel">
+      <div class="player-filters">
+        <div id="positionPills" class="position-pills"></div>
+        <div class="sort-hint">Click a column header to sort by it.</div>
+      </div>
       <div id="playersSection" class="players"></div>
 
       <div id="playerAddSection" style="display:none;">
@@ -590,6 +967,74 @@
     <div id="tab-league" class="tab-panel">
       <div id="leagueSection" class="league"></div>
     </div>
+  </div>
+</div>
+
+<div id="draftRoomView" class="draft-room" style="display:none;">
+  <div class="dr-header">
+    <button type="button" id="drExitBtn" class="dr-icon-btn" title="Exit draft room">✕</button>
+    <div class="dr-status" id="drStatus">—</div>
+    <button type="button" id="drSettingsBtn" class="dr-icon-btn" title="Draft settings">⚙</button>
+  </div>
+
+  <div id="drSettingsPanel" class="dr-settings-panel" style="display:none;"></div>
+
+  <div id="drTeamStrip" class="dr-team-strip"></div>
+
+  <div id="drBanner" class="dr-banner"></div>
+
+  <div id="drPendingAssignment" class="dr-banner"></div>
+
+  <div class="dr-content">
+    <div id="dr-tab-players" class="dr-tab-panel active">
+      <div class="player-filters">
+        <div id="drPositionPills" class="position-pills"></div>
+        <div class="sort-hint">Tap a column header to sort.</div>
+      </div>
+      <div id="drPlayersSection" class="players"></div>
+    </div>
+
+    <div id="dr-tab-board" class="dr-tab-panel">
+      <div class="league-loading">Draft board view is coming soon.</div>
+    </div>
+
+    <div id="dr-tab-results" class="dr-tab-panel">
+      <div class="dr-sub-tabs">
+        <button type="button" class="dr-sub-tab-btn active" data-drsubtab="picks">Picks</button>
+        <button type="button" class="dr-sub-tab-btn" data-drsubtab="rosters">Rosters</button>
+      </div>
+      <div id="dr-subtab-picks" class="dr-sub-tab-panel active">
+        <div id="drPicksSection"></div>
+      </div>
+      <div id="dr-subtab-rosters" class="dr-sub-tab-panel">
+        <select id="drRosterTeamSelect"></select>
+        <div id="drRosterListSection"></div>
+      </div>
+    </div>
+
+    <div id="dr-tab-queue" class="dr-tab-panel">
+      <div class="league-loading">Queue is coming soon — the star icons will let you pre-rank players you want.</div>
+    </div>
+  </div>
+
+
+  <div class="dr-nav dr-floating-panel">
+    <button type="button" class="dr-tab-btn active" data-drtab="players">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
+      Players
+    </button>
+    <button type="button" class="dr-tab-btn" data-drtab="board">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 9h17M3.5 15h17M9 3.5v17M15 3.5v17"/></svg>
+      Board
+    </button>
+    <button type="button" class="dr-tab-btn" data-drtab="results">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      Results
+    </button>
+    <button type="button" class="dr-tab-btn" data-drtab="queue">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.6 5.4 5.9.9-4.3 4.1 1 5.9L12 17l-5.2 2.8 1-5.9-4.3-4.1 5.9-.9z"/></svg>
+      Queue
+    </button>
   </div>
 </div>
 
@@ -637,6 +1082,27 @@
   const newPlayerPosition = document.getElementById("newPlayerPosition");
   const addPlayerBtn = document.getElementById("addPlayerBtn");
   const playerMsg = document.getElementById("playerMsg");
+  const positionPills = document.getElementById("positionPills");
+
+  positionPills.addEventListener("click", (e) => {
+    const btn = e.target.closest(".position-pill");
+    if (!btn) return;
+    playerPositionFilter = btn.dataset.position;
+    refreshPlayerViews();
+  });
+
+  playersSection.addEventListener("click", (e) => {
+    const th = e.target.closest("th[data-field]");
+    if (!th) return;
+    const field = th.dataset.field;
+    if (field === playerSortField) {
+      playerSortDir = playerSortDir === "desc" ? "asc" : "desc";
+    } else {
+      playerSortField = field;
+      playerSortDir = "desc";
+    }
+    refreshPlayerViews();
+  });
   const tabBtns = document.querySelectorAll(".tab-btn");
   const tabPanels = document.querySelectorAll(".tab-panel");
 
@@ -650,12 +1116,72 @@
   });
 
   let allTeams = [];
+  let allGms = [];
   let allPlayers = [];
   let selectedFormat = "snake";
   let isCommissioner = false;
   let myTeamIds = [];
   let picksChannel = null;
+  let currentDraftRoomId = null;
+  let currentDraftRoomData = null;
+
+  const draftRoomView = document.getElementById("draftRoomView");
+  const drExitBtn = document.getElementById("drExitBtn");
+  const drStatus = document.getElementById("drStatus");
+  const drSettingsBtn = document.getElementById("drSettingsBtn");
+  const drSettingsPanel = document.getElementById("drSettingsPanel");
+  const drTeamStrip = document.getElementById("drTeamStrip");
+  const drBanner = document.getElementById("drBanner");
+  const drPendingAssignment = document.getElementById("drPendingAssignment");
+  const drPositionPills = document.getElementById("drPositionPills");
+  const drPlayersSection = document.getElementById("drPlayersSection");
+  const drPicksSection = document.getElementById("drPicksSection");
+  const drRosterTeamSelect = document.getElementById("drRosterTeamSelect");
+  const drRosterListSection = document.getElementById("drRosterListSection");
+  const drTabBtns = document.querySelectorAll(".dr-tab-btn");
+  const drTabPanels = document.querySelectorAll(".dr-tab-panel");
+  const drSubTabBtns = document.querySelectorAll(".dr-sub-tab-btn");
+  const drSubTabPanels = document.querySelectorAll(".dr-sub-tab-panel");
   let expandedDraftIds = new Set();
+  let playerSortField = "ovr";
+  let playerSortDir = "desc";
+  let playerPositionFilter = "All";
+
+  const POSITION_FILTERS = ["All", "PG", "SG", "SF", "PF", "C"];
+  // Combo/generic positions match more than one filter bucket, since we
+  // don't know which "half" of the combo a given player leans toward.
+  const POSITION_BUCKET_MAP = {
+    PG: ["PG", "G"],
+    SG: ["SG", "G", "GF"],
+    SF: ["SF", "F", "GF"],
+    PF: ["PF", "F", "FC"],
+    C: ["C", "FC"],
+  };
+
+  function playerMatchesPositionFilter(player, filter) {
+    if (filter === "All") return true;
+    const bucket = POSITION_BUCKET_MAP[filter];
+    return bucket ? bucket.indexOf(player.position) !== -1 : player.position === filter;
+  }
+
+  const RATING_FIELDS = [
+    { key: "ovr", label: "Overall", short: "OVR" },
+    { key: "tp", label: "3PT", short: "3PT" },
+    { key: "ft", label: "Free Throw", short: "FT" },
+    { key: "fg", label: "Field Goal", short: "FG" },
+    { key: "ins", label: "Inside Scoring", short: "INS" },
+    { key: "dnk", label: "Dunk", short: "DNK" },
+    { key: "stre", label: "Strength", short: "STR" },
+    { key: "jmp", label: "Jumping", short: "JMP" },
+    { key: "spd", label: "Speed", short: "SPD" },
+    { key: "endu", label: "Endurance", short: "END" },
+    { key: "drb", label: "Dribbling", short: "DRB" },
+    { key: "pss", label: "Passing", short: "PSS" },
+    { key: "oiq", label: "Offensive IQ", short: "OIQ" },
+    { key: "diq", label: "Defensive IQ", short: "DIQ" },
+    { key: "reb", label: "Rebounding", short: "REB" },
+    { key: "hgt", label: "Height", short: "HGT" },
+  ];
 
   function showMsg(text, type) {
     loginMsg.textContent = text;
@@ -705,9 +1231,10 @@
     }).join("");
 
     allTeams = [];
+    allGms = data.map((gm) => ({ id: gm.id, name: gm.name }));
     data.forEach((gm) => {
       (gm.teams || []).forEach((t) => {
-        allTeams.push({ id: t.id, name: t.name, gmName: gm.name });
+        allTeams.push({ id: t.id, name: t.name, gmName: gm.name, gmId: gm.id });
       });
     });
 
@@ -726,7 +1253,10 @@
 
   async function loadPlayers() {
     playersSection.innerHTML = '<div class="league-loading">Loading players…</div>';
-    const { data, error } = await sb.from("players").select("id, name, position").order("name");
+    const { data, error } = await sb
+      .from("players")
+      .select("id, name, position, ovr, tp, ft, fg, ins, dnk, stre, jmp, spd, endu, drb, pss, oiq, diq, reb, hgt, skills")
+      .order("name");
 
     if (error) {
       playersSection.innerHTML = '<div class="league-error">Could not load players: ' + escapeHtml(error.message) + '</div>';
@@ -734,24 +1264,71 @@
     }
 
     allPlayers = data;
+    buildPositionPills();
+    renderPlayersTab();
+  }
 
-    if (data.length === 0) {
-      playersSection.innerHTML = '<div class="league-loading">No players in the pool yet.</div>';
+  function sortPlayers(list, field, dir) {
+    return list.slice().sort((a, b) => {
+      const av = a[field];
+      const bv = b[field];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return dir === "desc" ? bv - av : av - bv;
+    });
+  }
+
+  function buildPositionPills() {
+    positionPills.innerHTML = POSITION_FILTERS.map((pos) =>
+      '<button type="button" class="position-pill' + (pos === playerPositionFilter ? " active" : "") + '" data-position="' + escapeHtml(pos) + '">' + escapeHtml(pos) + "</button>"
+    ).join("");
+  }
+
+  function ratingHeaderCell(f) {
+    const isActive = f.key === playerSortField;
+    const arrow = isActive ? (playerSortDir === "desc" ? " ↓" : " ↑") : "";
+    return '<th class="' + (isActive ? "sort-active" : "") + '" data-field="' + f.key + '" title="' + escapeHtml(f.label) + '">' + f.short + arrow + "</th>";
+  }
+
+  function renderPlayersTab() {
+    let list = allPlayers.filter((p) => playerMatchesPositionFilter(p, playerPositionFilter));
+    list = sortPlayers(list, playerSortField, playerSortDir);
+
+    if (list.length === 0) {
+      playersSection.innerHTML = '<div class="league-loading">No players match this filter.</div>';
       return;
     }
 
-    playersSection.innerHTML = '<ul class="player-list">' + data.map((p) =>
-      "<li><span>" + escapeHtml(p.name) + "</span>" +
-        (p.position ? '<span class="pos">' + escapeHtml(p.position) + "</span>" : "") +
-      "</li>"
-    ).join("") + "</ul>";
+    const headerCells = '<th>Name</th><th>Pos</th>' + RATING_FIELDS.map(ratingHeaderCell).join("");
+    const bodyRows = list.map((p) => {
+      const cells = RATING_FIELDS.map((f) => {
+        const v = p[f.key];
+        return '<td class="' + (f.key === playerSortField ? "sort-active" : "") + '">' + (v != null ? v : "—") + "</td>";
+      }).join("");
+      return (
+        "<tr>" +
+          "<td class=\"ratings-name-cell\">" + escapeHtml(p.name) + "</td>" +
+          "<td>" + (p.position ? escapeHtml(p.position) : "—") + "</td>" +
+          cells +
+        "</tr>"
+      );
+    }).join("");
+
+    playersSection.innerHTML =
+      '<div class="ratings-table-wrap">' +
+        '<table class="ratings-table"><thead><tr>' + headerCells + "</tr></thead><tbody>" + bodyRows + "</tbody></table>" +
+      "</div>";
   }
 
   function buildOrderRows() {
-    const options = allTeams
-      .map((t) => '<option value="' + t.id + '">' + escapeHtml(t.name) + " (" + escapeHtml(t.gmName) + ")</option>")
+    // Snake drafts order the 8 teams; salary cap drafts order the 4 GMs
+    // (each GM bids from one shared pot, so there's no per-team turn).
+    const entries = selectedFormat === "auction" ? allGms : allTeams;
+    const options = entries
+      .map((e) => '<option value="' + e.id + '">' + escapeHtml(e.name) + (e.gmName ? " (" + escapeHtml(e.gmName) + ")" : "") + "</option>")
       .join("");
-    orderRows.innerHTML = allTeams.map((_, i) => {
+    orderRows.innerHTML = entries.map((_, i) => {
       const pos = i + 1;
       return (
         '<div class="order-row">' +
@@ -760,14 +1337,21 @@
         "</div>"
       );
     }).join("");
-    // Default each position to a different team so the selects start as a valid permutation.
-    allTeams.forEach((t, i) => {
-      document.getElementById("orderPos" + (i + 1)).value = t.id;
+    // Default each position to a different entry so the selects start as a valid permutation.
+    entries.forEach((e, i) => {
+      document.getElementById("orderPos" + (i + 1)).value = e.id;
     });
   }
 
   function statusLabel(status) {
     return status.replace("_", " ");
+  }
+
+  // The stored format value stays "auction" (drafts.format check constraint,
+  // all the d.format === "auction" logic) since it's an internal identifier —
+  // only the displayed label changes to "Salary Cap" per the user's request.
+  function formatLabel(format) {
+    return format === "auction" ? "Salary Cap" : "Snake";
   }
 
   // Whose turn is it for a given overall pick number, given the draft's team
@@ -789,23 +1373,6 @@
     return sign + m + ":" + String(s).padStart(2, "0");
   }
 
-  // Renders the countdown span (updated every second by updatePickTimers,
-  // purely client-side from the stored deadline — no re-fetch needed) plus,
-  // for the commissioner only, a small inline control to change the pick
-  // length mid-draft.
-  function renderTimerControl(d, baseTimeIso) {
-    if (!baseTimeIso) return "";
-    const deadlineIso = new Date(new Date(baseTimeIso).getTime() + (d.pick_time_seconds || 90) * 1000).toISOString();
-    let html = ' <span class="pick-timer" data-deadline="' + deadlineIso + '"></span>';
-    if (isCommissioner) {
-      html += '<span class="timer-adjust">' +
-        '<input type="number" min="10" step="5" class="timer-seconds-input" id="timerSeconds-' + d.id + '" value="' + (d.pick_time_seconds || 90) + '">' +
-        '<button class="timer-seconds-save-btn" data-draft-id="' + d.id + '">Set</button>' +
-      "</span>";
-    }
-    return html;
-  }
-
   function updatePickTimers() {
     document.querySelectorAll(".pick-timer").forEach((el) => {
       const deadline = new Date(el.dataset.deadline).getTime();
@@ -820,199 +1387,62 @@
     });
   }
 
-  setInterval(updatePickTimers, 1000);
+  // Records a win: closes the nomination (only if still open — the .eq
+  // guards against two clients racing to do this at the same moment) then
+  // inserts the pick with team_id left null for the winning GM to assign.
+  async function awardNomination(d, openNom) {
+    const rotationSize = d.draft_order.length;
+    const round = Math.ceil(openNom.nomination_number / rotationSize);
 
-  function renderSnakeBoard(d) {
-    const teamCount = d.draft_order.length;
-    const picks = (d.picks || []).slice().sort((a, b) => a.pick_number - b.pick_number);
-    const nextPickNumber = picks.length + 1;
-    const totalPicks = d.rounds ? d.rounds * teamCount : null;
+    const { data, error: nomError } = await sb
+      .from("nominations")
+      .update({ status: "sold", resolved_at: new Date().toISOString() })
+      .eq("id", openNom.id)
+      .eq("status", "open")
+      .select();
 
-    let html = "";
+    if (nomError || !data || data.length === 0) return;
 
-    if (totalPicks && nextPickNumber > totalPicks) {
-      html += '<div class="on-clock complete">🎉 Draft complete!</div>';
-    } else {
-      const turn = computeTurn(d.draft_order, teamCount, nextPickNumber);
-      const teamName = turn.slot && turn.slot.teams ? turn.slot.teams.name : "Unknown team";
-      const turnGmName = turn.slot && turn.slot.teams && turn.slot.teams.gms ? turn.slot.teams.gms.name : "";
-      const isMyTurn = !!turn.slot && (isCommissioner || myTeamIds.indexOf(turn.slot.team_id) !== -1);
-      const lastPick = picks.length > 0 ? picks[picks.length - 1] : null;
-      const baseTime = lastPick ? lastPick.picked_at : d.started_at;
-
-      html += '<div class="on-clock' + (isMyTurn ? " mine" : "") + '">' +
-        "Round " + turn.round + " · Pick " + nextPickNumber + " — <strong>" +
-        escapeHtml(teamName) + "</strong>" + (turnGmName ? " (" + escapeHtml(turnGmName) + ")" : "") +
-        (isMyTurn ? ' <span class="you-badge">On the clock</span>' : "") +
-        renderTimerControl(d, baseTime) +
-      "</div>";
-
-      if (isMyTurn && turn.slot) {
-        const pickedIds = new Set(picks.map((p) => p.player_id));
-        const available = allPlayers.filter((p) => !pickedIds.has(p.id));
-        html += '<div class="available-players">' +
-          (available.length === 0
-            ? '<div class="league-loading">No players left in the pool.</div>'
-            : available.map((p) =>
-                '<div class="available-player-row">' +
-                  "<span>" + escapeHtml(p.name) + (p.position ? ' <span class="pos">' + escapeHtml(p.position) + "</span>" : "") + "</span>" +
-                  '<button class="draft-player-btn" data-draft-id="' + d.id +
-                    '" data-team-id="' + turn.slot.team_id +
-                    '" data-pick-number="' + nextPickNumber +
-                    '" data-round="' + turn.round +
-                    '" data-player-id="' + p.id + '">Draft</button>' +
-                "</div>"
-              ).join("")
-          ) +
-        "</div>";
-      }
-    }
-
-    if (picks.length > 0) {
-      html += '<div class="pick-history">' +
-        '<div class="pick-history-title">Picks so far</div>' +
-        picks.slice().reverse().map((p) => {
-          const teamName = p.teams ? p.teams.name : "";
-          const playerName = p.players ? p.players.name : "";
-          return '<div class="pick-history-row"><span>#' + p.pick_number + "</span><span>" +
-            escapeHtml(playerName) + "</span><span>" + escapeHtml(teamName) + "</span></div>";
-        }).join("") +
-      "</div>";
-    }
-
-    return html;
-  }
-
-  function computeTeamBudgets(d) {
-    const budgets = {};
-    d.draft_order.forEach((o) => {
-      budgets[o.team_id] = d.starting_budget || 0;
+    await sb.from("picks").insert({
+      draft_id: d.id,
+      pick_number: openNom.nomination_number,
+      round: round,
+      gm_id: openNom.current_bid_gm_id,
+      player_id: openNom.player_id,
+      amount_paid: openNom.current_bid,
     });
-    (d.picks || []).forEach((p) => {
-      if (budgets[p.team_id] !== undefined && p.amount_paid) {
-        budgets[p.team_id] -= p.amount_paid;
-      }
-    });
-    return budgets;
+
+    loadDrafts();
+    if (currentDraftRoomId) loadDraftRoom();
   }
 
-  function renderAuctionBoard(d) {
-    const teamCount = d.draft_order.length;
-    const picks = d.picks || [];
-    const totalTarget = d.rounds ? d.rounds * teamCount : null;
-    const budgets = computeTeamBudgets(d);
+  let autoAwardInFlight = new Set();
 
-    let html = "";
+  // Only the commissioner's or the winning GM's own browser can actually
+  // complete an award (the picks insert needs one of those two to pass
+  // RLS) — so this only fires from those clients, avoiding a nomination
+  // getting closed with no pick ever recorded.
+  function checkAutoAward() {
+    const d = currentDraftRoomData;
+    if (!d || d.format !== "auction" || d.status !== "in_progress" || !currentUser) return;
+    const openNom = (d.nominations || []).find((n) => n.status === "open");
+    if (!openNom || !openNom.current_bid_gm_id) return;
+    if (!isCommissioner && currentUser.id !== openNom.current_bid_gm_id) return;
+    if (autoAwardInFlight.has(openNom.id)) return;
 
-    if (totalTarget && picks.length >= totalTarget) {
-      html += '<div class="on-clock complete">🎉 Draft complete!</div>';
-    } else {
-      const openNom = (d.nominations || []).find((n) => n.status === "open");
+    // Bidding deadline is based on the last bid, not the nomination itself —
+    // it resets every time someone bids.
+    const deadline = new Date(openNom.last_bid_at).getTime() + (d.pick_time_seconds || 90) * 1000;
+    if (Date.now() < deadline) return;
 
-      if (openNom) {
-        const playerName = openNom.players ? openNom.players.name : "Unknown player";
-        const playerPos = openNom.players && openNom.players.position ? openNom.players.position : "";
-        const bidTeamName = openNom.bidder ? openNom.bidder.name : "Nobody yet";
-        const bidGmName = openNom.bidder && openNom.bidder.gms ? openNom.bidder.gms.name : "";
-
-        html += '<div class="on-clock">' +
-          "On the block: <strong>" + escapeHtml(playerName) + "</strong>" +
-          (playerPos ? " (" + escapeHtml(playerPos) + ")" : "") +
-          " — Current bid: <strong>$" + openNom.current_bid + "</strong> by " +
-          escapeHtml(bidTeamName) + (bidGmName ? " (" + escapeHtml(bidGmName) + ")" : "") +
-        "</div>";
-
-        // The team currently holding the high bid can't bid against itself.
-        const biddableTeamIds = (isCommissioner ? allTeams.map((t) => t.id) : myTeamIds)
-          .filter((tid) => tid !== openNom.current_bid_team_id);
-        if (biddableTeamIds.length > 0) {
-          const teamOptions = biddableTeamIds.map((tid) => {
-            const t = allTeams.find((at) => at.id === tid);
-            const bal = budgets[tid] !== undefined ? budgets[tid] : "?";
-            return '<option value="' + tid + '">' + escapeHtml(t ? t.name : tid) + " ($" + bal + " left)</option>";
-          }).join("");
-          html += '<div class="bid-row">' +
-            '<select id="bidTeamSelect">' + teamOptions + "</select>" +
-            '<input id="bidAmountInput" type="number" min="' + (openNom.current_bid + 1) + '" step="1" placeholder="$' + (openNom.current_bid + 1) + '+">' +
-            '<button class="place-bid-btn" data-draft-id="' + d.id +
-              '" data-nomination-id="' + openNom.id +
-              '" data-current-bid="' + openNom.current_bid +
-              '" data-current-bid-team-id="' + (openNom.current_bid_team_id || "") + '">Place Bid</button>' +
-          "</div>";
-        }
-
-        if (isCommissioner && openNom.current_bid_team_id) {
-          html += '<button class="sell-nomination-btn" data-draft-id="' + d.id +
-            '" data-nomination-id="' + openNom.id +
-            '" data-player-id="' + openNom.player_id +
-            '" data-team-id="' + openNom.current_bid_team_id +
-            '" data-amount="' + openNom.current_bid +
-            '" data-nomination-number="' + openNom.nomination_number +
-            '" data-team-count="' + teamCount + '">Sell to ' + escapeHtml(bidTeamName) + "</button>";
-        }
-      } else {
-        const nextNominationNumber = (d.nominations || []).length + 1;
-        const position = ((nextNominationNumber - 1) % teamCount) + 1;
-        const slot = d.draft_order.find((o) => o.pick_position === position);
-        const teamName = slot && slot.teams ? slot.teams.name : "Unknown team";
-        const turnGmName = slot && slot.teams && slot.teams.gms ? slot.teams.gms.name : "";
-        const isMyTurn = !!slot && (isCommissioner || myTeamIds.indexOf(slot.team_id) !== -1);
-        const soldNoms = (d.nominations || []).filter((n) => n.status === "sold")
-          .sort((a, b) => new Date(a.resolved_at) - new Date(b.resolved_at));
-        const lastSoldNom = soldNoms.length > 0 ? soldNoms[soldNoms.length - 1] : null;
-        const baseTime = lastSoldNom ? lastSoldNom.resolved_at : d.started_at;
-
-        html += '<div class="on-clock' + (isMyTurn ? " mine" : "") + '">' +
-          "Nominate — <strong>" + escapeHtml(teamName) + "</strong>" +
-          (turnGmName ? " (" + escapeHtml(turnGmName) + ")" : "") +
-          (isMyTurn ? ' <span class="you-badge">Your turn to nominate</span>' : "") +
-          renderTimerControl(d, baseTime) +
-        "</div>";
-
-        if (isMyTurn && slot) {
-          const soldIds = new Set(picks.map((p) => p.player_id));
-          const available = allPlayers.filter((p) => !soldIds.has(p.id));
-          html += '<div class="available-players">' +
-            (available.length === 0
-              ? '<div class="league-loading">No players left in the pool.</div>'
-              : available.map((p) =>
-                  '<div class="available-player-row">' +
-                    "<span>" + escapeHtml(p.name) + (p.position ? ' <span class="pos">' + escapeHtml(p.position) + "</span>" : "") + "</span>" +
-                    '<button class="nominate-player-btn" data-draft-id="' + d.id +
-                      '" data-team-id="' + slot.team_id +
-                      '" data-nomination-number="' + nextNominationNumber +
-                      '" data-player-id="' + p.id + '">Nominate</button>' +
-                  "</div>"
-                ).join("")
-            ) +
-          "</div>";
-        }
-      }
-    }
-
-    html += '<div class="pick-history">' +
-      '<div class="pick-history-title">Budgets</div>' +
-      d.draft_order.map((o) => {
-        const teamName = o.teams ? o.teams.name : "Unknown team";
-        const bal = budgets[o.team_id] !== undefined ? budgets[o.team_id] : d.starting_budget;
-        return '<div class="pick-history-row"><span>$' + bal + "</span><span>" + escapeHtml(teamName) + "</span></div>";
-      }).join("") +
-    "</div>";
-
-    if (picks.length > 0) {
-      html += '<div class="pick-history">' +
-        '<div class="pick-history-title">Sold so far</div>' +
-        picks.slice().sort((a, b) => b.pick_number - a.pick_number).map((p) => {
-          const teamName = p.teams ? p.teams.name : "";
-          const playerName = p.players ? p.players.name : "";
-          return '<div class="pick-history-row"><span>$' + (p.amount_paid || 0) + "</span><span>" +
-            escapeHtml(playerName) + "</span><span>" + escapeHtml(teamName) + "</span></div>";
-        }).join("") +
-      "</div>";
-    }
-
-    return html;
+    autoAwardInFlight.add(openNom.id);
+    awardNomination(d, openNom).finally(() => autoAwardInFlight.delete(openNom.id));
   }
+
+  setInterval(() => {
+    updatePickTimers();
+    checkAutoAward();
+  }, 1000);
 
   async function loadDrafts() {
     draftsSection.innerHTML = '<div class="league-loading">Loading drafts…</div>';
@@ -1020,11 +1450,7 @@
       .from("drafts")
       .select(
         "id, label, format, status, rounds, starting_budget, created_at, started_at, pick_time_seconds, " +
-        "draft_order(pick_position, team_id, teams(name, gms(name))), " +
-        "picks(pick_number, round, team_id, player_id, amount_paid, picked_at, teams(name), players(name, position)), " +
-        "nominations(id, nomination_number, player_id, status, current_bid, current_bid_team_id, created_at, resolved_at, " +
-          "players(name, position), " +
-          "bidder:teams!current_bid_team_id(name, gms(name)))"
+        "draft_order(pick_position, team_id, gm_id, teams(name, gms(name)), gms(name))"
       )
       .order("created_at", { ascending: false });
 
@@ -1049,10 +1475,13 @@
       const cancelBtnHtml = (isCommissioner && (d.status === "setup" || d.status === "in_progress"))
         ? '<button class="cancel-draft-btn secondary" data-draft-id="' + d.id + '">Cancel Draft</button>'
         : "";
+      const deleteBtnHtml = (isCommissioner && d.status !== "in_progress")
+        ? '<button class="delete-draft-btn secondary" data-draft-id="' + d.id + '">Delete Draft</button>'
+        : "";
 
       let bodyHtml;
       if (d.status === "in_progress") {
-        bodyHtml = (d.format === "snake" ? renderSnakeBoard(d) : renderAuctionBoard(d)) + cancelBtnHtml;
+        bodyHtml = '<button type="button" class="enter-draft-room-btn" data-draft-id="' + d.id + '">Enter Draft Room</button>' + cancelBtnHtml;
       } else {
         // Setup/completed/cancelled drafts collapse to a summary by default —
         // showing their full pick order for every old test draft was making
@@ -1062,6 +1491,9 @@
           ? ""
           : '<ol class="pick-order-list">' +
               order.map((o) => {
+                if (o.gm_id) {
+                  return "<li>" + escapeHtml(o.gms ? o.gms.name : "Unknown GM") + "</li>";
+                }
                 const teamName = o.teams ? o.teams.name : "Unknown team";
                 const teamGmName = o.teams && o.teams.gms ? o.teams.gms.name : "";
                 return "<li>" + escapeHtml(teamName) + (teamGmName ? " (" + escapeHtml(teamGmName) + ")" : "") + "</li>";
@@ -1075,7 +1507,7 @@
         const startBtnHtml = (isCommissioner && d.status === "setup")
           ? '<button class="start-draft-btn" data-draft-id="' + d.id + '">Start Draft</button>'
           : "";
-        bodyHtml = toggleBtnHtml + pickOrderHtml + startBtnHtml + cancelBtnHtml;
+        bodyHtml = toggleBtnHtml + pickOrderHtml + startBtnHtml + cancelBtnHtml + deleteBtnHtml;
       }
 
       return (
@@ -1083,7 +1515,7 @@
           '<div class="draft-label">' + escapeHtml(d.label || "Untitled Draft") + "</div>" +
           '<div class="draft-meta">' +
             '<span class="status-pill ' + d.status + '">' + escapeHtml(statusLabel(d.status)) + "</span>" +
-            "<span>" + escapeHtml(d.format) + "</span>" +
+            "<span>" + escapeHtml(formatLabel(d.format)) + "</span>" +
             "<span>" + escapeHtml(configText) + "</span>" +
           "</div>" +
           bodyHtml +
@@ -1091,6 +1523,525 @@
       );
     }).join("");
   }
+
+  // ---------- Draft Room (full-screen live draft experience) ----------
+
+  const DRAFT_ROOM_SELECT =
+    "id, label, format, status, rounds, starting_budget, created_at, started_at, pick_time_seconds, " +
+    "draft_order(pick_position, team_id, gm_id, teams(id, name, logo_url, gms(name))), " +
+    "picks(id, pick_number, round, team_id, gm_id, player_id, amount_paid, picked_at, teams(name), gms(name), players(name, position)), " +
+    "nominations(id, nomination_number, player_id, status, current_bid, current_bid_team_id, current_bid_gm_id, created_at, resolved_at, last_bid_at, " +
+      "players(name, position, ovr), " +
+      "bidder:teams!current_bid_team_id(name, gms(name)), " +
+      "bidderGm:gms!current_bid_gm_id(name))";
+
+  function initials(name) {
+    return name.split(" ").filter(Boolean).map((w) => w.charAt(0).toUpperCase()).slice(0, 2).join("");
+  }
+
+  // Total picks needed to fill the league always uses the real team count
+  // (8), never d.draft_order.length — that's the rotation size, which for
+  // salary cap drafts is 4 GMs, not 8 teams.
+  function draftTotalPicksTarget(d) {
+    return d.rounds ? d.rounds * allTeams.length : null;
+  }
+
+  function computeGmBudgets(d) {
+    const budgets = {};
+    allGms.forEach((g) => {
+      budgets[g.id] = d.starting_budget || 0;
+    });
+    (d.picks || []).forEach((p) => {
+      if (p.gm_id && budgets[p.gm_id] !== undefined && p.amount_paid) {
+        budgets[p.gm_id] -= p.amount_paid;
+      }
+    });
+    return budgets;
+  }
+
+  // How much a GM could offer on the current nomination without leaving
+  // themselves unable to afford $1 minimum bids on their remaining slots
+  // across both their teams.
+  function computeMaxOffer(d, gmId) {
+    const budgets = computeGmBudgets(d);
+    const budget = budgets[gmId] != null ? budgets[gmId] : (d.starting_budget || 0);
+    const myTeamsCount = allTeams.filter((t) => t.gmId === gmId).length;
+    const target = d.rounds ? d.rounds * myTeamsCount : null;
+    if (!target) return budget;
+    const won = (d.picks || []).filter((p) => p.gm_id === gmId).length;
+    const remainingSlots = Math.max(0, target - won);
+    const reserve = Math.max(0, remainingSlots - 1);
+    return Math.max(0, budget - reserve);
+  }
+
+  // How many nominations until it's this viewer's turn to nominate (0 means
+  // it's their turn right now). Null if they're not a participant (e.g. the
+  // commissioner isn't necessarily in the rotation... though here she is).
+  function nominationsUntilMyTurn(d) {
+    const rotationSize = d.draft_order.length;
+    const myPosition = d.draft_order.find((o) => o.gm_id === currentUser.id);
+    if (!myPosition) return null;
+    const nextNominationNumber = (d.nominations || []).length + 1;
+    const currentPositionInRotation = ((nextNominationNumber - 1) % rotationSize) + 1;
+    let diff = myPosition.pick_position - currentPositionInRotation;
+    if (diff < 0) diff += rotationSize;
+    return diff;
+  }
+
+  // Returns { teamId } for snake drafts or { gmId } for salary cap drafts —
+  // whoever is up next to pick/nominate — or null if the draft is complete
+  // or (salary cap only) a nomination is currently open for bidding.
+  function getCurrentTurn(d) {
+    const rotationSize = d.draft_order.length;
+    if (d.format === "snake") {
+      const picks = (d.picks || []).slice().sort((a, b) => a.pick_number - b.pick_number);
+      const totalPicks = draftTotalPicksTarget(d);
+      const nextPickNumber = picks.length + 1;
+      if (totalPicks && nextPickNumber > totalPicks) return null;
+      const turn = computeTurn(d.draft_order, rotationSize, nextPickNumber);
+      return turn.slot ? { teamId: turn.slot.team_id } : null;
+    }
+    const auctionTotal = draftTotalPicksTarget(d);
+    if (auctionTotal && (d.picks || []).length >= auctionTotal) return null;
+    const openNom = (d.nominations || []).find((n) => n.status === "open");
+    if (openNom) return null;
+    const nextNominationNumber = (d.nominations || []).length + 1;
+    const position = ((nextNominationNumber - 1) % rotationSize) + 1;
+    const slot = d.draft_order.find((o) => o.pick_position === position);
+    return slot ? { gmId: slot.gm_id } : null;
+  }
+
+  function renderTimerDisplay(baseTimeIso, pickTimeSeconds) {
+    if (!baseTimeIso) return "";
+    const deadlineIso = new Date(new Date(baseTimeIso).getTime() + (pickTimeSeconds || 90) * 1000).toISOString();
+    return ' <span class="pick-timer" data-deadline="' + deadlineIso + '"></span>';
+  }
+
+  function renderDrTeamStrip(d) {
+    const turn = getCurrentTurn(d);
+
+    if (d.format === "auction") {
+      // Salary cap: one chip per GM (not team), since bidding is per-GM.
+      const budgets = computeGmBudgets(d);
+      drTeamStrip.innerHTML = d.draft_order.map((o) => {
+        const gm = allGms.find((g) => g.id === o.gm_id);
+        const isCurrent = !!turn && turn.gmId === o.gm_id;
+        const bal = budgets[o.gm_id] != null ? budgets[o.gm_id] : d.starting_budget;
+        return '<div class="dr-team-chip' + (isCurrent ? " current" : "") + '">' +
+          '<div class="dr-team-chip-fallback">' + (gm ? escapeHtml(gm.name.charAt(0)) : "?") + "</div>" +
+          '<span class="dr-team-name">' + escapeHtml(gm ? gm.name : "Unknown") + "</span>" +
+          '<span class="dr-team-budget">$' + bal + "</span></div>";
+      }).join("");
+      return;
+    }
+
+    drTeamStrip.innerHTML = d.draft_order.map((o) => {
+      const team = o.teams;
+      const isCurrent = !!turn && turn.teamId === o.team_id;
+      const logo = team && team.logo_url
+        ? '<img src="' + escapeHtml(team.logo_url) + '" alt="">'
+        : '<div class="dr-team-chip-fallback">' + (team ? escapeHtml(team.name.charAt(0)) : "?") + "</div>";
+      return '<div class="dr-team-chip' + (isCurrent ? " current" : "") + '">' + logo +
+        '<span class="dr-team-name">' + escapeHtml(team ? team.name : "Unknown") + "</span></div>";
+    }).join("");
+  }
+
+  function renderDrStatusAndBanner(d) {
+    const teamCount = d.draft_order.length;
+    const picks = (d.picks || []).slice().sort((a, b) => a.pick_number - b.pick_number);
+    const totalPicks = d.rounds ? d.rounds * teamCount : null;
+
+    drBanner.innerHTML = "";
+
+    if (d.status !== "in_progress") {
+      drStatus.textContent = statusLabel(d.status);
+      return;
+    }
+
+    if (d.format === "snake") {
+      const nextPickNumber = picks.length + 1;
+      if (totalPicks && nextPickNumber > totalPicks) {
+        drStatus.innerHTML = "🎉 Draft complete!";
+        return;
+      }
+      const turn = computeTurn(d.draft_order, teamCount, nextPickNumber);
+      const teamName = turn.slot && turn.slot.teams ? turn.slot.teams.name : "Unknown team";
+      const lastPick = picks.length > 0 ? picks[picks.length - 1] : null;
+      const baseTime = lastPick ? lastPick.picked_at : d.started_at;
+      drStatus.innerHTML = '<span class="dr-round-pick">Round ' + turn.round + " · Pick " + nextPickNumber + "</span>" +
+        escapeHtml(teamName) + renderTimerDisplay(baseTime, d.pick_time_seconds);
+      return;
+    }
+
+    // Salary cap (auction): GM-based nomination and bidding, not team-based.
+    const auctionTotal = draftTotalPicksTarget(d);
+    if (auctionTotal && picks.length >= auctionTotal) {
+      drStatus.innerHTML = "🎉 Draft complete!";
+      return;
+    }
+    const rotationSize = d.draft_order.length;
+    const untilMyTurn = nominationsUntilMyTurn(d);
+    const turnLine = untilMyTurn === 0
+      ? '<span class="you-badge">Your turn to nominate</span>'
+      : (untilMyTurn != null ? escapeHtml(untilMyTurn + (untilMyTurn === 1 ? " nomination" : " nominations") + " until your turn") : "");
+
+    const openNom = (d.nominations || []).find((n) => n.status === "open");
+    if (openNom) {
+      const playerName = openNom.players ? openNom.players.name : "Unknown player";
+      const playerPos = openNom.players && openNom.players.position ? openNom.players.position : "";
+      const playerOvr = openNom.players && openNom.players.ovr != null ? openNom.players.ovr : null;
+      const bidGmName = openNom.bidderGm ? openNom.bidderGm.name : "Nobody yet";
+
+      // Bidding has its own timer, separate from the nomination timer —
+      // it resets to a fresh countdown every time someone bids.
+      drStatus.innerHTML = renderTimerDisplay(openNom.last_bid_at, d.pick_time_seconds) +
+        '<span class="dr-round-pick" style="margin-top:4px;">' + turnLine + "</span>";
+
+      const budgets = computeGmBudgets(d);
+      const nextBid = openNom.current_bid + 1;
+      let controlsHtml = "";
+      const iAmEligible = currentUser.id !== openNom.current_bid_gm_id;
+
+      const bal = budgets[currentUser.id] != null ? budgets[currentUser.id] : "?";
+      const maxOffer = computeMaxOffer(d, currentUser.id);
+
+      if (iAmEligible) {
+        controlsHtml =
+          '<div class="dr-bid-bottom">' +
+            '<div class="bid-stepper">' +
+              '<button type="button" class="bid-step-btn" data-step="-1">−</button>' +
+              '<input id="bidAmountInput" type="number" min="' + nextBid + '" step="1" value="' + nextBid + '">' +
+              '<button type="button" class="bid-step-btn" data-step="1">+</button>' +
+            "</div>" +
+            '<button class="place-bid-btn" data-draft-id="' + d.id +
+              '" data-nomination-id="' + openNom.id +
+              '" data-current-bid="' + openNom.current_bid +
+              '" data-current-bid-gm-id="' + (openNom.current_bid_gm_id || "") + '">Offer $' + nextBid + "</button>" +
+          "</div>" +
+          '<div class="dr-bid-hint">Max Offer $' + maxOffer + " · Budget $" + bal + "</div>";
+      } else {
+        controlsHtml =
+          '<div class="dr-bid-bottom dr-bid-bottom-disabled">' +
+            '<div class="bid-stepper"><button type="button" disabled>−</button><input disabled value="' + nextBid + '"><button type="button" disabled>+</button></div>' +
+            '<button class="place-bid-btn" disabled>You have the highest bid</button>' +
+          "</div>" +
+          '<div class="dr-bid-hint">Max Offer $' + maxOffer + " · Budget $" + bal + "</div>";
+      }
+
+      drBanner.innerHTML = '<div class="dr-bid-banner">' +
+        '<div class="dr-bid-top">' +
+          '<div class="dr-bid-player">' + escapeHtml(playerName) +
+            (playerPos ? ' <span class="pos">' + escapeHtml(playerPos) + (playerOvr != null ? '<span class="dr-bid-ovr">OVR ' + playerOvr + "</span>" : "") + "</span>" : "") +
+          "</div>" +
+          '<div class="dr-bid-current">' +
+            '<div class="dr-bid-current-amount">$' + openNom.current_bid + "</div>" +
+            '<div class="dr-bid-current-team">' + escapeHtml(bidGmName) + "</div>" +
+          "</div>" +
+        "</div>" +
+        controlsHtml +
+      "</div>";
+    } else {
+      const nextNominationNumber = (d.nominations || []).length + 1;
+      const position = ((nextNominationNumber - 1) % rotationSize) + 1;
+      const slot = d.draft_order.find((o) => o.pick_position === position);
+      const gm = slot ? allGms.find((g) => g.id === slot.gm_id) : null;
+      const soldNoms = (d.nominations || []).filter((n) => n.status === "sold")
+        .sort((a, b) => new Date(a.resolved_at) - new Date(b.resolved_at));
+      const lastSoldNom = soldNoms.length > 0 ? soldNoms[soldNoms.length - 1] : null;
+      const baseTime = lastSoldNom ? lastSoldNom.resolved_at : d.started_at;
+      drStatus.innerHTML = renderTimerDisplay(baseTime, d.pick_time_seconds) +
+        '<span class="dr-round-pick" style="margin-top:4px;">' +
+        (untilMyTurn === 0 ? '<span class="you-badge">Your turn to nominate</span>' : "Nominate — " + escapeHtml(gm ? gm.name : "Unknown")) +
+        "</span>";
+    }
+  }
+
+  function buildDrPositionPills() {
+    drPositionPills.innerHTML = POSITION_FILTERS.map((pos) =>
+      '<button type="button" class="position-pill' + (pos === playerPositionFilter ? " active" : "") + '" data-position="' + escapeHtml(pos) + '">' + escapeHtml(pos) + "</button>"
+    ).join("");
+  }
+
+  function renderDrPlayers(d) {
+    const teamCount = d.draft_order.length;
+    const picks = d.picks || [];
+    const pickedIds = new Set(picks.map((p) => p.player_id));
+    let pool = allPlayers.filter((p) => !pickedIds.has(p.id) && playerMatchesPositionFilter(p, playerPositionFilter));
+    pool = sortPlayers(pool, playerSortField, playerSortDir);
+
+    let actionType = null;
+    let actionTeamId = null;
+    let actionGmId = null;
+    let actionExtra = {};
+
+    if (d.status === "in_progress") {
+      const turn = getCurrentTurn(d);
+      if (turn && d.format === "snake") {
+        if (isCommissioner || myTeamIds.indexOf(turn.teamId) !== -1) {
+          const nextPickNumber = picks.length + 1;
+          const computed = computeTurn(d.draft_order, teamCount, nextPickNumber);
+          actionType = "draft";
+          actionTeamId = turn.teamId;
+          actionExtra = { pickNumber: nextPickNumber, round: computed.round };
+        }
+      } else if (turn && d.format === "auction") {
+        if (isCommissioner || turn.gmId === currentUser.id) {
+          actionType = "nominate";
+          actionGmId = turn.gmId;
+          actionExtra = { nominationNumber: (d.nominations || []).length + 1 };
+        }
+      }
+    }
+
+    if (pool.length === 0) {
+      drPlayersSection.innerHTML = '<div class="league-loading">No players left in the pool.</div>';
+      return;
+    }
+
+    // Action column sits right after Name (not at the far end) so it's
+    // visible without scrolling through all 16 rating columns first.
+    const headerCells = "<th>Name</th>" + (actionType ? "<th></th>" : "") + "<th>Pos</th>" + RATING_FIELDS.map(ratingHeaderCell).join("");
+    const bodyRows = pool.map((p) => {
+      const cells = RATING_FIELDS.map((f) => {
+        const v = p[f.key];
+        return '<td class="' + (f.key === playerSortField ? "sort-active" : "") + '">' + (v != null ? v : "—") + "</td>";
+      }).join("");
+      let actionCell = "";
+      if (actionType === "draft") {
+        actionCell = '<td><button class="draft-player-btn" data-draft-id="' + d.id +
+          '" data-team-id="' + actionTeamId +
+          '" data-pick-number="' + actionExtra.pickNumber +
+          '" data-round="' + actionExtra.round +
+          '" data-player-id="' + p.id + '">Draft</button></td>';
+      } else if (actionType === "nominate") {
+        actionCell = '<td><button class="nominate-player-btn" data-draft-id="' + d.id +
+          '" data-gm-id="' + actionGmId +
+          '" data-nomination-number="' + actionExtra.nominationNumber +
+          '" data-player-id="' + p.id + '">Nominate</button></td>';
+      } else if (actionType) {
+        actionCell = "<td></td>";
+      }
+      return (
+        "<tr>" +
+          '<td class="ratings-name-cell">' + escapeHtml(p.name) + "</td>" +
+          actionCell +
+          "<td>" + (p.position ? escapeHtml(p.position) : "—") + "</td>" +
+          cells +
+        "</tr>"
+      );
+    }).join("");
+
+    drPlayersSection.innerHTML =
+      '<div class="ratings-table-wrap">' +
+        '<table class="ratings-table"><thead><tr>' + headerCells + "</tr></thead><tbody>" + bodyRows + "</tbody></table>" +
+      "</div>";
+  }
+
+  function renderDrPicks(d) {
+    const picks = (d.picks || []).slice().sort((a, b) => b.pick_number - a.pick_number);
+    if (picks.length === 0) {
+      drPicksSection.innerHTML = '<div class="league-loading">No picks yet.</div>';
+      return;
+    }
+    drPicksSection.innerHTML = '<div class="pick-history">' +
+      picks.map((p) => {
+        const teamName = p.teams ? p.teams.name : (p.gms ? p.gms.name + " (unassigned)" : "");
+        const playerName = p.players ? p.players.name : "";
+        const leadLabel = d.format === "auction" ? "$" + (p.amount_paid || 0) : "#" + p.pick_number;
+        return '<div class="pick-history-row"><span>' + escapeHtml(String(leadLabel)) + "</span><span>" +
+          escapeHtml(playerName) + "</span><span>" + escapeHtml(teamName) + "</span></div>";
+      }).join("") +
+    "</div>";
+  }
+
+  function buildDrRosterTeamSelect() {
+    if (drRosterTeamSelect.options.length > 0) return;
+    drRosterTeamSelect.innerHTML = allTeams
+      .map((t) => '<option value="' + t.id + '">' + escapeHtml(t.name) + " (" + escapeHtml(t.gmName) + ")</option>")
+      .join("");
+    const myFirstTeam = allTeams.find((t) => t.gmId === currentUser.id);
+    if (myFirstTeam) drRosterTeamSelect.value = myFirstTeam.id;
+  }
+
+  function renderDrRosterList(d) {
+    buildDrRosterTeamSelect();
+    const teamId = drRosterTeamSelect.value;
+    const team = allTeams.find((t) => t.id === teamId);
+    const teamPicks = (d.picks || [])
+      .filter((p) => p.team_id === teamId)
+      .sort((a, b) => a.pick_number - b.pick_number);
+
+    const progress = '<div class="dr-roster-progress">' +
+      (team ? escapeHtml(team.name) : "") + " — " + teamPicks.length + (d.rounds ? "/" + d.rounds : "") +
+    "</div>";
+
+    if (teamPicks.length === 0) {
+      drRosterListSection.innerHTML = progress + '<div class="league-loading">No players drafted to this team yet.</div>';
+      return;
+    }
+
+    drRosterListSection.innerHTML = progress + '<div class="pick-history">' +
+      teamPicks.map((p, i) => {
+        const playerName = p.players ? p.players.name : "Unknown";
+        const playerPos = p.players && p.players.position ? p.players.position : "";
+        const lead = d.format === "auction" ? "$" + (p.amount_paid || 0) : "#" + p.pick_number;
+        return '<div class="pick-history-row"><span>' + escapeHtml(String(lead)) + "</span><span>" +
+          escapeHtml(playerName) + (playerPos ? " (" + escapeHtml(playerPos) + ")" : "") + "</span></div>";
+      }).join("") +
+    "</div>";
+  }
+
+  function renderDrSettingsPanel(d) {
+    if (!isCommissioner) {
+      drSettingsPanel.innerHTML = '<span class="sort-hint">Only the commissioner can adjust draft settings.</span>';
+      return;
+    }
+    drSettingsPanel.innerHTML =
+      "<label>Seconds per pick</label>" +
+      '<input type="number" min="10" step="5" id="drTimerSecondsInput" value="' + d.pick_time_seconds + '">' +
+      '<button type="button" id="drTimerSaveBtn">Set</button>';
+  }
+
+  function renderDrPendingAssignment(d) {
+    if (d.format !== "auction") {
+      drPendingAssignment.innerHTML = "";
+      return;
+    }
+    const myPending = (d.picks || []).filter((p) => p.gm_id === currentUser.id && !p.team_id);
+    if (myPending.length === 0) {
+      drPendingAssignment.innerHTML = "";
+      return;
+    }
+    const myTeams = allTeams.filter((t) => t.gmId === currentUser.id);
+    const teamOptions = myTeams.map((t) => '<option value="' + t.id + '">' + escapeHtml(t.name) + "</option>").join("");
+    drPendingAssignment.innerHTML = myPending.map((p) => {
+      const playerName = p.players ? p.players.name : "Unknown player";
+      const selectId = "assignTeamSelect-" + p.id;
+      return '<div class="dr-bid-banner dr-assign-banner">' +
+        "You won <strong>" + escapeHtml(playerName) + "</strong> for $" + (p.amount_paid || 0) + " — assign to:" +
+        '<div class="bid-row">' +
+          '<select id="' + selectId + '">' + teamOptions + "</select>" +
+          '<button class="assign-pick-team-btn" data-pick-id="' + p.id + '" data-select-id="' + selectId + '">Confirm</button>' +
+        "</div>" +
+      "</div>";
+    }).join("");
+  }
+
+  function renderDraftRoom() {
+    const d = currentDraftRoomData;
+    if (!d) return;
+    renderDrTeamStrip(d);
+    renderDrStatusAndBanner(d);
+    renderDrPendingAssignment(d);
+    renderDrPlayers(d);
+    renderDrPicks(d);
+    renderDrRosterList(d);
+    renderDrSettingsPanel(d);
+  }
+
+  function refreshPlayerViews() {
+    buildPositionPills();
+    buildDrPositionPills();
+    renderPlayersTab();
+    if (currentDraftRoomData) renderDrPlayers(currentDraftRoomData);
+  }
+
+  async function loadDraftRoom() {
+    if (!currentDraftRoomId) return;
+    const { data: d, error } = await sb
+      .from("drafts")
+      .select(DRAFT_ROOM_SELECT)
+      .eq("id", currentDraftRoomId)
+      .single();
+
+    if (error || !d) {
+      drStatus.textContent = "Could not load draft.";
+      return;
+    }
+
+    d.draft_order = (d.draft_order || []).slice().sort((a, b) => a.pick_position - b.pick_position);
+    currentDraftRoomData = d;
+    renderDraftRoom();
+  }
+
+  function openDraftRoom(draftId) {
+    currentDraftRoomId = draftId;
+    document.querySelector(".card").style.display = "none";
+    draftRoomView.style.display = "flex";
+    document.body.style.overflow = "hidden";
+    buildDrPositionPills();
+    loadDraftRoom();
+  }
+
+  function closeDraftRoom() {
+    currentDraftRoomId = null;
+    currentDraftRoomData = null;
+    draftRoomView.style.display = "none";
+    document.querySelector(".card").style.display = "block";
+    document.body.style.overflow = "";
+    loadDrafts();
+  }
+
+  drExitBtn.addEventListener("click", closeDraftRoom);
+
+  drSettingsBtn.addEventListener("click", () => {
+    drSettingsPanel.style.display = drSettingsPanel.style.display === "none" ? "flex" : "none";
+  });
+
+  drSettingsPanel.addEventListener("click", async (e) => {
+    if (e.target.id !== "drTimerSaveBtn") return;
+    const input = document.getElementById("drTimerSecondsInput");
+    const seconds = parseInt(input.value, 10);
+    if (!seconds || seconds < 10) {
+      alert("Enter a valid number of seconds (10 or more).");
+      return;
+    }
+    const { error } = await sb.from("drafts").update({ pick_time_seconds: seconds }).eq("id", currentDraftRoomId);
+    if (error) alert("Could not update pick timer: " + error.message);
+    loadDraftRoom();
+  });
+
+  drTabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      drTabBtns.forEach((b) => b.classList.remove("active"));
+      drTabPanels.forEach((p) => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("dr-tab-" + btn.dataset.drtab).classList.add("active");
+    });
+  });
+
+  drSubTabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      drSubTabBtns.forEach((b) => b.classList.remove("active"));
+      drSubTabPanels.forEach((p) => p.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("dr-subtab-" + btn.dataset.drsubtab).classList.add("active");
+    });
+  });
+
+  drRosterTeamSelect.addEventListener("change", () => {
+    if (currentDraftRoomData) renderDrRosterList(currentDraftRoomData);
+  });
+
+  drPositionPills.addEventListener("click", (e) => {
+    const btn = e.target.closest(".position-pill");
+    if (!btn) return;
+    playerPositionFilter = btn.dataset.position;
+    refreshPlayerViews();
+  });
+
+  drPlayersSection.addEventListener("click", (e) => {
+    const th = e.target.closest("th[data-field]");
+    if (!th) return;
+    const field = th.dataset.field;
+    if (field === playerSortField) {
+      playerSortDir = playerSortDir === "desc" ? "asc" : "desc";
+    } else {
+      playerSortField = field;
+      playerSortDir = "desc";
+    }
+    refreshPlayerViews();
+  });
 
   let currentUser = null;
 
@@ -1127,12 +2078,15 @@
       .channel("picks-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "picks" }, () => {
         loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "nominations" }, () => {
         loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "drafts" }, () => {
         loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
       })
       .subscribe();
   }
@@ -1197,6 +2151,7 @@
     formatAuctionBtn.classList.remove("active");
     draftRoundsLabel.textContent = "Rounds per team";
     auctionFields.style.display = "none";
+    if (isCommissioner) buildOrderRows();
   });
 
   formatAuctionBtn.addEventListener("click", () => {
@@ -1205,6 +2160,7 @@
     formatSnakeBtn.classList.remove("active");
     draftRoundsLabel.textContent = "Roster size per team (# of players)";
     auctionFields.style.display = "block";
+    if (isCommissioner) buildOrderRows();
   });
 
   createDraftBtn.addEventListener("click", async () => {
@@ -1231,10 +2187,11 @@
       return;
     }
 
-    const orderTeamIds = allTeams.map((_, i) => document.getElementById("orderPos" + (i + 1)).value);
-    const uniqueIds = new Set(orderTeamIds);
-    if (uniqueIds.size !== allTeams.length) {
-      showDraftMsg("Each team must be assigned to exactly one pick position — you have a duplicate.", "error");
+    const orderEntries = selectedFormat === "auction" ? allGms : allTeams;
+    const orderIds = orderEntries.map((_, i) => document.getElementById("orderPos" + (i + 1)).value);
+    const uniqueIds = new Set(orderIds);
+    if (uniqueIds.size !== orderEntries.length) {
+      showDraftMsg("Each " + (selectedFormat === "auction" ? "GM" : "team") + " must be assigned to exactly one pick position — you have a duplicate.", "error");
       return;
     }
 
@@ -1261,9 +2218,10 @@
       return;
     }
 
-    const orderRowsPayload = orderTeamIds.map((teamId, i) => ({
+    const orderRowsPayload = orderIds.map((id, i) => ({
       draft_id: draft.id,
-      team_id: teamId,
+      team_id: selectedFormat === "auction" ? null : id,
+      gm_id: selectedFormat === "auction" ? id : null,
       pick_position: i + 1,
     }));
     const { error: orderError } = await sb.from("draft_order").insert(orderRowsPayload);
@@ -1274,6 +2232,7 @@
     if (orderError) {
       showDraftMsg("Draft created, but pick order failed to save: " + orderError.message, "error");
       loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
       return;
     }
 
@@ -1284,7 +2243,13 @@
     loadDrafts();
   });
 
-  draftsSection.addEventListener("click", async (e) => {
+  document.addEventListener("click", async (e) => {
+    const enterBtn = e.target.closest(".enter-draft-room-btn");
+    if (enterBtn) {
+      openDraftRoom(enterBtn.dataset.draftId);
+      return;
+    }
+
     const startBtn = e.target.closest(".start-draft-btn");
     if (startBtn) {
       startBtn.disabled = true;
@@ -1297,6 +2262,7 @@
         alert("Could not start draft: " + error.message);
       }
       loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
       return;
     }
 
@@ -1315,6 +2281,7 @@
         alert("Could not record pick: " + error.message);
       }
       loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
       return;
     }
 
@@ -1326,21 +2293,51 @@
         draft_id: nominateBtn.dataset.draftId,
         nomination_number: parseInt(nominateBtn.dataset.nominationNumber, 10),
         player_id: nominateBtn.dataset.playerId,
-        nominated_by_team_id: nominateBtn.dataset.teamId,
+        nominated_by_gm_id: nominateBtn.dataset.gmId,
         current_bid: 1,
-        current_bid_team_id: nominateBtn.dataset.teamId,
+        current_bid_gm_id: nominateBtn.dataset.gmId,
         status: "open",
       });
       if (error) {
         alert("Could not nominate player: " + error.message);
       }
       loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
+      return;
+    }
+
+    const assignBtn = e.target.closest(".assign-pick-team-btn");
+    if (assignBtn) {
+      const select = document.getElementById(assignBtn.dataset.selectId);
+      assignBtn.disabled = true;
+      const { error } = await sb
+        .from("picks")
+        .update({ team_id: select.value })
+        .eq("id", assignBtn.dataset.pickId);
+      if (error) {
+        alert("Could not assign player to a team: " + error.message);
+        assignBtn.disabled = false;
+      }
+      loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
+      return;
+    }
+
+    const stepBtn = e.target.closest(".bid-step-btn");
+    if (stepBtn) {
+      const input = document.getElementById("bidAmountInput");
+      const offerBtn = document.querySelector(".place-bid-btn");
+      const step = parseInt(stepBtn.dataset.step, 10);
+      const min = parseInt(input.min, 10);
+      const current = parseInt(input.value, 10) || min;
+      const newVal = Math.max(min, current + step);
+      input.value = newVal;
+      if (offerBtn) offerBtn.textContent = "Offer $" + newVal;
       return;
     }
 
     const bidBtn = e.target.closest(".place-bid-btn");
     if (bidBtn) {
-      const teamSelect = document.getElementById("bidTeamSelect");
       const amountInput = document.getElementById("bidAmountInput");
       const currentBid = parseFloat(bidBtn.dataset.currentBid);
       const amount = parseFloat(amountInput.value);
@@ -1349,8 +2346,8 @@
         alert("Bid must be higher than the current bid of $" + currentBid + ".");
         return;
       }
-      if (teamSelect.value === bidBtn.dataset.currentBidTeamId) {
-        alert("That team already has the highest bid — pick a different team, or wait for someone else to bid.");
+      if (currentUser.id === bidBtn.dataset.currentBidGmId) {
+        alert("You already have the highest bid — wait for someone else to bid.");
         return;
       }
 
@@ -1358,7 +2355,7 @@
       bidBtn.textContent = "Bidding…";
       const { data, error } = await sb
         .from("nominations")
-        .update({ current_bid: amount, current_bid_team_id: teamSelect.value })
+        .update({ current_bid: amount, current_bid_gm_id: currentUser.id, last_bid_at: new Date().toISOString() })
         .eq("id", bidBtn.dataset.nominationId)
         .eq("current_bid", currentBid)
         .select();
@@ -1369,41 +2366,7 @@
         alert("Someone else just bid first — refreshing with the latest bid.");
       }
       loadDrafts();
-      return;
-    }
-
-    const sellBtn = e.target.closest(".sell-nomination-btn");
-    if (sellBtn) {
-      sellBtn.disabled = true;
-      sellBtn.textContent = "Selling…";
-      const teamCount = parseInt(sellBtn.dataset.teamCount, 10);
-      const nominationNumber = parseInt(sellBtn.dataset.nominationNumber, 10);
-      const round = Math.ceil(nominationNumber / teamCount);
-
-      const { error: nomError } = await sb
-        .from("nominations")
-        .update({ status: "sold", resolved_at: new Date().toISOString() })
-        .eq("id", sellBtn.dataset.nominationId);
-
-      if (nomError) {
-        alert("Could not close nomination: " + nomError.message);
-        loadDrafts();
-        return;
-      }
-
-      const { error: pickError } = await sb.from("picks").insert({
-        draft_id: sellBtn.dataset.draftId,
-        pick_number: nominationNumber,
-        round: round,
-        team_id: sellBtn.dataset.teamId,
-        player_id: sellBtn.dataset.playerId,
-        amount_paid: parseFloat(sellBtn.dataset.amount),
-      });
-
-      if (pickError) {
-        alert("Nomination closed, but recording the pick failed: " + pickError.message);
-      }
-      loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
       return;
     }
 
@@ -1425,6 +2388,7 @@
         alert("Could not update pick timer: " + error.message);
       }
       loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
       return;
     }
 
@@ -1437,6 +2401,7 @@
         expandedDraftIds.add(id);
       }
       loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
       return;
     }
 
@@ -1450,6 +2415,19 @@
         .eq("id", cancelBtn.dataset.draftId);
       if (error) {
         alert("Could not cancel draft: " + error.message);
+      }
+      loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
+      return;
+    }
+
+    const deleteBtn = e.target.closest(".delete-draft-btn");
+    if (deleteBtn) {
+      if (!confirm("Permanently delete this draft, its pick order, and all its picks? This can't be undone.")) return;
+      deleteBtn.disabled = true;
+      const { error } = await sb.from("drafts").delete().eq("id", deleteBtn.dataset.draftId);
+      if (error) {
+        alert("Could not delete draft: " + error.message);
       }
       loadDrafts();
     }
