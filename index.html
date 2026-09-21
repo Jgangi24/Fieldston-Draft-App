@@ -41,6 +41,28 @@
     border-radius: 12px;
     padding: 32px;
   }
+  /* Once signed in, drop the centered-form-card look in favor of a
+     full-bleed shell — matches the Draft Room's own full-screen takeover
+     so stepping between "browsing drafts" and "inside a draft" feels like
+     one continuous app instead of two different ones. */
+  .card.signed-in {
+    position: fixed;
+    inset: 0;
+    max-width: none;
+    background: var(--bg);
+    border: none;
+    border-radius: 0;
+    padding: 20px 16px 32px;
+    overflow-y: auto;
+  }
+  /* The card's own background/positioning goes full-bleed above, but the
+     content itself stays a readable column width — otherwise things like
+     the full-width "Enter Draft Room" button stretch edge-to-edge on a
+     wide desktop window. */
+  #appView {
+    max-width: 640px;
+    margin: 0 auto;
+  }
   h1 {
     font-size: 20px;
     margin: 0 0 4px;
@@ -108,6 +130,7 @@
   }
   .status-dot.ok { background: var(--success); }
   .status-dot.pending { background: var(--muted); }
+  .status-dot.error { background: var(--error); }
   .status-line {
     font-size: 12px;
     color: var(--muted);
@@ -122,12 +145,8 @@
   .app-header-top {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     margin-bottom: 10px;
-  }
-  .conn-badge {
-    font-size: 12px;
-    color: var(--muted);
   }
   .header-logout {
     width: auto;
@@ -151,49 +170,12 @@
     font-size: 12px;
     color: var(--muted);
   }
-  .tab-bar {
-    display: flex;
-    gap: 4px;
-    margin: 0 0 20px;
-    border-bottom: 1px solid var(--border);
-  }
-  .tab-btn {
-    flex: 1;
-    width: auto;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-    color: var(--muted);
-    padding: 10px 4px;
-    font-size: 13px;
-    font-weight: 600;
-  }
-  .tab-btn:hover { background: transparent; color: var(--text); }
-  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-  .league {
-    margin: 0;
-  }
   .league-loading, .league-error {
     font-size: 13px;
     color: var(--muted);
     text-align: center;
     padding: 12px 0;
   }
-  .gm-block {
-    margin-bottom: 14px;
-  }
-  .gm-header {
-    font-size: 13px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 4px;
-  }
-  .gm-block.you .gm-header { color: var(--accent); }
   .you-badge {
     font-size: 10px;
     font-weight: 700;
@@ -202,18 +184,6 @@
     padding: 2px 7px;
     border-radius: 999px;
   }
-  .team-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .team-list li {
-    font-size: 13px;
-    color: var(--muted);
-    padding: 5px 0 5px 4px;
-    border-bottom: 1px solid var(--border);
-  }
-  .team-list li:last-child { border-bottom: none; }
   select {
     width: 100%;
     padding: 10px 12px;
@@ -503,22 +473,6 @@
     padding: 5px 12px;
     font-size: 11px;
   }
-  .add-player-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 8px;
-  }
-  .add-player-row input, .add-player-row select {
-    flex: 1;
-    min-width: 120px;
-    margin-bottom: 0;
-  }
-  .add-player-row button {
-    width: auto;
-    flex-shrink: 0;
-    padding: 10px 16px;
-  }
   .draft-card .start-draft-btn {
     margin-top: 10px;
   }
@@ -589,6 +543,25 @@
     flex-shrink: 0;
   }
   .pick-history-row:last-child { border-bottom: none; }
+  .pick-team-logo {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+  .pick-team-logo-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--card);
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 700;
+  }
+  .dr-roster-progress { display: flex; align-items: center; gap: 6px; }
   .bid-row {
     display: flex;
     gap: 8px;
@@ -909,6 +882,10 @@
   .dr-sub-tab-btn {
     flex: 1;
     width: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     background: var(--card);
     border: 1px solid var(--border);
     color: var(--muted);
@@ -916,6 +893,7 @@
     font-size: 13px;
     font-weight: 600;
   }
+  .dr-sub-tab-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
   .dr-sub-tab-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
   .dr-sub-tab-panel { display: none; }
   .dr-sub-tab-panel.active { display: block; }
@@ -958,9 +936,9 @@
 <body>
 
 <div class="card">
-  <div class="status-line">
+  <div id="connStatusLine" class="status-line" style="display:none;">
     <span id="connDot" class="status-dot pending"></span>
-    <span id="connText">Checking Supabase connection…</span>
+    <span id="connText"></span>
   </div>
 
   <div id="loginView">
@@ -981,7 +959,6 @@
   <div id="appView">
     <div class="app-header">
       <div class="app-header-top">
-        <span class="conn-badge">✅ Connected</span>
         <button id="logoutBtn" class="header-logout">Sign Out</button>
       </div>
       <div class="app-header-user">
@@ -990,74 +967,37 @@
       </div>
     </div>
 
-    <div class="tab-bar">
-      <button type="button" class="tab-btn active" data-tab="drafts">Drafts</button>
-      <button type="button" class="tab-btn" data-tab="players">Players</button>
-      <button type="button" class="tab-btn" data-tab="league">League</button>
-    </div>
+    <div id="draftsSection" class="drafts"></div>
 
-    <div id="tab-drafts" class="tab-panel active">
-      <div id="draftsSection" class="drafts"></div>
+    <div id="draftSetupSection" style="display:none;">
+      <div class="section-title">Create a New Draft</div>
 
-      <div id="draftSetupSection" style="display:none;">
-        <div class="section-title">Create a New Draft</div>
+      <label for="draftLabel">Label (optional)</label>
+      <input id="draftLabel" type="text" placeholder="e.g. 2026 Season Draft">
 
-        <label for="draftLabel">Label (optional)</label>
-        <input id="draftLabel" type="text" placeholder="e.g. 2026 Season Draft">
-
-        <label>Format</label>
-        <div class="format-toggle">
-          <button type="button" id="formatSnakeBtn" class="format-btn active">Snake</button>
-          <button type="button" id="formatAuctionBtn" class="format-btn">Salary Cap</button>
-        </div>
-
-        <label for="draftRounds" id="draftRoundsLabel">Rounds per team</label>
-        <input id="draftRounds" type="number" min="1" step="1" placeholder="e.g. 13">
-
-        <div id="auctionFields" style="display:none;">
-          <label for="draftBudget">Starting budget per team ($)</label>
-          <input id="draftBudget" type="number" min="1" step="1" placeholder="e.g. 200">
-        </div>
-
-        <label for="draftPickSeconds">Seconds per pick</label>
-        <input id="draftPickSeconds" type="number" min="10" step="5" value="90">
-
-        <label>Pick Order</label>
-        <div class="field-hint">For snake drafts, this is the pick order (round 1 goes Pick 1 → Pick 8, even rounds reverse automatically). For salary cap drafts, this is the nomination turn order instead.</div>
-        <div id="orderRows" class="order-rows"></div>
-
-        <button id="createDraftBtn">Create Draft</button>
-        <div id="draftMsg" class="msg"></div>
+      <label>Format</label>
+      <div class="format-toggle">
+        <button type="button" id="formatSnakeBtn" class="format-btn active">Snake</button>
+        <button type="button" id="formatAuctionBtn" class="format-btn">Salary Cap</button>
       </div>
-    </div>
 
-    <div id="tab-players" class="tab-panel">
-      <div class="player-filters">
-        <div id="positionPills" class="position-pills"></div>
-        <div class="sort-hint">Click a column header to sort by it.</div>
+      <label for="draftRounds" id="draftRoundsLabel">Rounds per team</label>
+      <input id="draftRounds" type="number" min="1" step="1" placeholder="e.g. 13">
+
+      <div id="auctionFields" style="display:none;">
+        <label for="draftBudget">Starting budget per team ($)</label>
+        <input id="draftBudget" type="number" min="1" step="1" placeholder="e.g. 200">
       </div>
-      <div id="playersSection" class="players"></div>
 
-      <div id="playerAddSection" style="display:none;">
-        <div class="section-title">Add a Player</div>
-        <div class="add-player-row">
-          <input id="newPlayerName" type="text" placeholder="Player name">
-          <select id="newPlayerPosition">
-            <option value="">Position (optional)</option>
-            <option value="PG">PG</option>
-            <option value="SG">SG</option>
-            <option value="SF">SF</option>
-            <option value="PF">PF</option>
-            <option value="C">C</option>
-          </select>
-          <button id="addPlayerBtn">Add Player</button>
-        </div>
-        <div id="playerMsg" class="msg"></div>
-      </div>
-    </div>
+      <label for="draftPickSeconds">Seconds per pick</label>
+      <input id="draftPickSeconds" type="number" min="10" step="5" value="90">
 
-    <div id="tab-league" class="tab-panel">
-      <div id="leagueSection" class="league"></div>
+      <label>Pick Order</label>
+      <div class="field-hint">For snake drafts, this is the pick order (round 1 goes Pick 1 → Pick 8, even rounds reverse automatically). For salary cap drafts, this is the nomination turn order instead.</div>
+      <div id="orderRows" class="order-rows"></div>
+
+      <button id="createDraftBtn">Create Draft</button>
+      <div id="draftMsg" class="msg"></div>
     </div>
   </div>
 </div>
@@ -1092,8 +1032,14 @@
 
     <div id="dr-tab-results" class="dr-tab-panel">
       <div class="dr-sub-tabs">
-        <button type="button" class="dr-sub-tab-btn active" data-drsubtab="picks">Picks</button>
-        <button type="button" class="dr-sub-tab-btn" data-drsubtab="rosters">Rosters</button>
+        <button type="button" class="dr-sub-tab-btn active" data-drsubtab="picks">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>
+          Picks
+        </button>
+        <button type="button" class="dr-sub-tab-btn" data-drsubtab="rosters">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2"/><circle cx="17" cy="9" r="2.4"/><path d="M15.2 13.3c2.6.2 4.6 2.3 4.8 5.2"/></svg>
+          Rosters
+        </button>
       </div>
       <div id="dr-subtab-picks" class="dr-sub-tab-panel active">
         <div id="drPicksSection"></div>
@@ -1143,6 +1089,7 @@
     "lkrauskopf@yahoo.com": "Lew",
   };
 
+  const connStatusLine = document.getElementById("connStatusLine");
   const connDot = document.getElementById("connDot");
   const connText = document.getElementById("connText");
   const loginView = document.getElementById("loginView");
@@ -1154,7 +1101,6 @@
   const passwordInput = document.getElementById("password");
   const gmName = document.getElementById("gmName");
   const gmEmail = document.getElementById("gmEmail");
-  const leagueSection = document.getElementById("leagueSection");
   const draftsSection = document.getElementById("draftsSection");
   const draftSetupSection = document.getElementById("draftSetupSection");
   const draftLabelInput = document.getElementById("draftLabel");
@@ -1168,44 +1114,6 @@
   const orderRows = document.getElementById("orderRows");
   const createDraftBtn = document.getElementById("createDraftBtn");
   const draftMsg = document.getElementById("draftMsg");
-  const playersSection = document.getElementById("playersSection");
-  const playerAddSection = document.getElementById("playerAddSection");
-  const newPlayerName = document.getElementById("newPlayerName");
-  const newPlayerPosition = document.getElementById("newPlayerPosition");
-  const addPlayerBtn = document.getElementById("addPlayerBtn");
-  const playerMsg = document.getElementById("playerMsg");
-  const positionPills = document.getElementById("positionPills");
-
-  positionPills.addEventListener("click", (e) => {
-    const btn = e.target.closest(".position-pill");
-    if (!btn) return;
-    playerPositionFilter = btn.dataset.position;
-    refreshPlayerViews();
-  });
-
-  playersSection.addEventListener("click", (e) => {
-    const th = e.target.closest("th[data-field]");
-    if (!th) return;
-    const field = th.dataset.field;
-    if (field === playerSortField) {
-      playerSortDir = playerSortDir === "desc" ? "asc" : "desc";
-    } else {
-      playerSortField = field;
-      playerSortDir = "desc";
-    }
-    refreshPlayerViews();
-  });
-  const tabBtns = document.querySelectorAll(".tab-btn");
-  const tabPanels = document.querySelectorAll(".tab-panel");
-
-  tabBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      tabBtns.forEach((b) => b.classList.remove("active"));
-      tabPanels.forEach((p) => p.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
-    });
-  });
 
   let allTeams = [];
   let allGms = [];
@@ -1298,6 +1206,14 @@
     return div.innerHTML;
   }
 
+  // Small inline team-logo swatch for pick/roster lists — falls back to the
+  // team's first initial in a circle (same convention as the team strip's
+  // .dr-team-chip-fallback) when there's no logo_url.
+  function teamLogoHtml(name, logoUrl) {
+    if (logoUrl) return '<img class="pick-team-logo" src="' + escapeHtml(logoUrl) + '" alt="">';
+    return '<span class="pick-team-logo pick-team-logo-fallback">' + (name ? escapeHtml(name.charAt(0)) : "?") + "</span>";
+  }
+
   // Markup for a themed dropdown standing in for a native <select> (see the
   // .custom-select CSS comment for why). `customSelectInnerHtml` is the
   // toggle+menu only, for when an existing stable container element plays
@@ -1327,37 +1243,21 @@
   }
 
   async function loadLeague(user) {
-    leagueSection.innerHTML = '<div class="league-loading">Loading league…</div>';
     const { data, error } = await sb
       .from("gms")
-      .select("id, name, is_commissioner, teams(id, name)")
+      .select("id, name, is_commissioner, teams(id, name, logo_url)")
       .order("name");
 
     if (error) {
-      leagueSection.innerHTML = '<div class="league-error">Could not load league: ' + escapeHtml(error.message) + '</div>';
+      draftsSection.innerHTML = '<div class="league-error">Could not load league: ' + escapeHtml(error.message) + '</div>';
       return;
     }
-
-    leagueSection.innerHTML = data.map((gm) => {
-      const isYou = gm.id === user.id;
-      const teams = (gm.teams || [])
-        .map((t) => "<li>" + escapeHtml(t.name) + "</li>")
-        .join("");
-      return (
-        '<div class="gm-block' + (isYou ? " you" : "") + '">' +
-          '<div class="gm-header">' + escapeHtml(gm.name) +
-            (isYou ? ' <span class="you-badge">You</span>' : "") +
-          "</div>" +
-          '<ul class="team-list">' + teams + "</ul>" +
-        "</div>"
-      );
-    }).join("");
 
     allTeams = [];
     allGms = data.map((gm) => ({ id: gm.id, name: gm.name }));
     data.forEach((gm) => {
       (gm.teams || []).forEach((t) => {
-        allTeams.push({ id: t.id, name: t.name, gmName: gm.name, gmId: gm.id });
+        allTeams.push({ id: t.id, name: t.name, gmName: gm.name, gmId: gm.id, logoUrl: t.logo_url });
       });
     });
 
@@ -1365,30 +1265,16 @@
     isCommissioner = !!(me && me.is_commissioner);
     myTeamIds = me ? (me.teams || []).map((t) => t.id) : [];
     draftSetupSection.style.display = isCommissioner ? "block" : "none";
-    playerAddSection.style.display = isCommissioner ? "block" : "none";
     if (isCommissioner) buildOrderRows();
   }
 
-  function showPlayerMsg(text, type) {
-    playerMsg.textContent = text;
-    playerMsg.className = "msg " + type;
-  }
-
   async function loadPlayers() {
-    playersSection.innerHTML = '<div class="league-loading">Loading players…</div>';
     const { data, error } = await sb
       .from("players")
       .select("id, name, position, ovr, tp, ft, fg, ins, dnk, stre, jmp, spd, endu, drb, pss, oiq, diq, reb, hgt, skills")
       .order("name");
 
-    if (error) {
-      playersSection.innerHTML = '<div class="league-error">Could not load players: ' + escapeHtml(error.message) + '</div>';
-      return;
-    }
-
-    allPlayers = data;
-    buildPositionPills();
-    renderPlayersTab();
+    if (!error) allPlayers = data;
   }
 
   // The queue is global per GM (not scoped to one draft) since the player
@@ -1431,46 +1317,10 @@
     });
   }
 
-  function buildPositionPills() {
-    positionPills.innerHTML = POSITION_FILTERS.map((pos) =>
-      '<button type="button" class="position-pill' + (pos === playerPositionFilter ? " active" : "") + '" data-position="' + escapeHtml(pos) + '">' + escapeHtml(pos) + "</button>"
-    ).join("");
-  }
-
   function ratingHeaderCell(f) {
     const isActive = f.key === playerSortField;
     const arrow = isActive ? (playerSortDir === "desc" ? " ↓" : " ↑") : "";
     return '<th class="' + (isActive ? "sort-active" : "") + '" data-field="' + f.key + '" title="' + escapeHtml(f.label) + '">' + f.short + arrow + "</th>";
-  }
-
-  function renderPlayersTab() {
-    let list = allPlayers.filter((p) => playerMatchesPositionFilter(p, playerPositionFilter));
-    list = sortPlayers(list, playerSortField, playerSortDir);
-
-    if (list.length === 0) {
-      playersSection.innerHTML = '<div class="league-loading">No players match this filter.</div>';
-      return;
-    }
-
-    const headerCells = '<th>Name</th><th>Pos</th>' + RATING_FIELDS.map(ratingHeaderCell).join("");
-    const bodyRows = list.map((p) => {
-      const cells = RATING_FIELDS.map((f) => {
-        const v = p[f.key];
-        return '<td class="' + (f.key === playerSortField ? "sort-active" : "") + '">' + (v != null ? v : "—") + "</td>";
-      }).join("");
-      return (
-        "<tr>" +
-          "<td class=\"ratings-name-cell\">" + escapeHtml(p.name) + "</td>" +
-          "<td>" + (p.position ? escapeHtml(p.position) : "—") + "</td>" +
-          cells +
-        "</tr>"
-      );
-    }).join("");
-
-    playersSection.innerHTML =
-      '<div class="ratings-table-wrap">' +
-        '<table class="ratings-table"><thead><tr>' + headerCells + "</tr></thead><tbody>" + bodyRows + "</tbody></table>" +
-      "</div>";
   }
 
   function buildOrderRows() {
@@ -1709,7 +1559,7 @@
   const DRAFT_ROOM_SELECT =
     "id, label, format, status, rounds, starting_budget, created_at, started_at, pick_time_seconds, " +
     "draft_order(pick_position, team_id, gm_id, teams(id, name, logo_url, gms(name))), " +
-    "picks(id, pick_number, round, team_id, gm_id, player_id, amount_paid, picked_at, teams(name), gms(name), players(name, position)), " +
+    "picks(id, pick_number, round, team_id, gm_id, player_id, amount_paid, picked_at, teams(name, logo_url), gms(name), players(name, position)), " +
     "nominations(id, nomination_number, player_id, status, current_bid, current_bid_team_id, current_bid_gm_id, created_at, resolved_at, last_bid_at, " +
       "players(name, position, ovr), " +
       "bidder:teams!current_bid_team_id(name, gms(name)), " +
@@ -2143,10 +1993,11 @@
     drPicksSection.innerHTML = '<div class="pick-history">' +
       picks.map((p) => {
         const teamName = p.teams ? p.teams.name : (p.gms ? p.gms.name + " (unassigned)" : "");
+        const teamLogo = p.teams ? teamLogoHtml(p.teams.name, p.teams.logo_url) : "";
         const playerName = p.players ? p.players.name : "";
         const leadLabel = d.format === "auction" ? "$" + (p.amount_paid || 0) : "#" + p.pick_number;
         return '<div class="pick-history-row"><span>' + escapeHtml(String(leadLabel)) + "</span><span>" +
-          escapeHtml(playerName) + "</span><span>" + escapeHtml(teamName) + "</span></div>";
+          escapeHtml(playerName) + "</span><span>" + teamLogo + escapeHtml(teamName) + "</span></div>";
       }).join("") +
     "</div>";
   }
@@ -2170,7 +2021,8 @@
       .sort((a, b) => a.pick_number - b.pick_number);
 
     const progress = '<div class="dr-roster-progress">' +
-      (team ? escapeHtml(team.name) : "") + " — " + teamPicks.length + (d.rounds ? "/" + d.rounds : "") +
+      (team ? teamLogoHtml(team.name, team.logoUrl) : "") +
+      '<span>' + (team ? escapeHtml(team.name) : "") + " — " + teamPicks.length + (d.rounds ? "/" + d.rounds : "") + "</span>" +
     "</div>";
 
     if (teamPicks.length === 0) {
@@ -2260,9 +2112,7 @@
   }
 
   function refreshPlayerViews() {
-    buildPositionPills();
     buildDrPositionPills();
-    renderPlayersTab();
     if (currentDraftRoomData) {
       renderDrPlayers(currentDraftRoomData);
       renderDrQueue(currentDraftRoomData);
@@ -2392,6 +2242,7 @@
 
   async function renderSignedIn(user) {
     currentUser = user;
+    document.querySelector(".card").classList.add("signed-in");
     loginView.style.display = "none";
     appView.style.display = "block";
     gmName.textContent = displayNameFor(user);
@@ -2404,6 +2255,7 @@
   }
 
   function renderSignedOut() {
+    document.querySelector(".card").classList.remove("signed-in");
     appView.style.display = "none";
     loginView.style.display = "block";
     loginMsg.className = "msg";
@@ -2441,11 +2293,14 @@
     // the client can reach this project's Auth endpoint.
     const { data: { session }, error } = await sb.auth.getSession();
     if (error) {
-      connDot.className = "status-dot";
+      // Only surface this when something's actually wrong — a successful
+      // connection needs no confirmation banner cluttering the login/app
+      // header, but a real outage should be impossible to miss.
+      connStatusLine.style.display = "flex";
+      connDot.className = "status-dot error";
       connText.textContent = "⚠️ Could not reach Supabase: " + error.message;
     } else {
-      connDot.className = "status-dot ok";
-      connText.textContent = "Connected to Supabase project (nzydysnununphiobnirq)";
+      connStatusLine.style.display = "none";
     }
 
     if (session && session.user) {
@@ -2817,31 +2672,6 @@
       }
       loadDrafts();
     }
-  });
-
-  addPlayerBtn.addEventListener("click", async () => {
-    const name = newPlayerName.value.trim();
-    if (!name) {
-      showPlayerMsg("Enter a player name.", "error");
-      return;
-    }
-    const position = newPlayerPosition.value || null;
-
-    addPlayerBtn.disabled = true;
-    addPlayerBtn.textContent = "Adding…";
-    const { error } = await sb.from("players").insert({ name, position });
-    addPlayerBtn.disabled = false;
-    addPlayerBtn.textContent = "Add Player";
-
-    if (error) {
-      showPlayerMsg("Could not add player: " + error.message, "error");
-      return;
-    }
-
-    newPlayerName.value = "";
-    newPlayerPosition.value = "";
-    showPlayerMsg("Player added!", "success");
-    loadPlayers();
   });
 
   init();
