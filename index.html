@@ -19,6 +19,7 @@
     --success: #4fdb8a;
     --warning: #ff9f43;
     --warning-hover: #ffb268;
+    --star: #ffd166;
   }
   * { box-sizing: border-box; }
   body {
@@ -428,6 +429,21 @@
   .ratings-table tbody tr:hover td { background: rgba(255,255,255,0.03); }
   .ratings-table tbody tr:hover td:first-child { background: var(--card); }
   .ratings-name-cell { font-weight: 600; }
+  .queue-star-btn {
+    width: auto;
+    padding: 0;
+    margin: 0 6px 0 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--muted);
+    cursor: pointer;
+    vertical-align: middle;
+  }
+  .queue-star-btn:hover { background: none; color: var(--star); }
+  .queue-star-btn.queued { color: var(--star); }
   .ratings-table .draft-player-btn,
   .ratings-table .nominate-player-btn {
     width: auto;
@@ -1036,7 +1052,7 @@
     </div>
 
     <div id="dr-tab-queue" class="dr-tab-panel">
-      <div class="league-loading">Queue is coming soon — the star icons will let you pre-rank players you want.</div>
+      <div id="drQueueSection"></div>
     </div>
   </div>
 
@@ -1141,6 +1157,7 @@
   let allTeams = [];
   let allGms = [];
   let allPlayers = [];
+  let myQueueEntries = [];
   let selectedFormat = "snake";
   let isCommissioner = false;
   let myTeamIds = [];
@@ -1159,6 +1176,7 @@
   const drPositionPills = document.getElementById("drPositionPills");
   const drPlayersSection = document.getElementById("drPlayersSection");
   const drBoardSection = document.getElementById("drBoardSection");
+  const drQueueSection = document.getElementById("drQueueSection");
   const drPicksSection = document.getElementById("drPicksSection");
   const drRosterTeamSelect = document.getElementById("drRosterTeamSelect");
   const drRosterListSection = document.getElementById("drRosterListSection");
@@ -1290,6 +1308,35 @@
     allPlayers = data;
     buildPositionPills();
     renderPlayersTab();
+  }
+
+  // The queue is global per GM (not scoped to one draft) since the player
+  // pool is shared league-wide — a star made in one draft still means
+  // something in another. RLS already restricts every row to gm_id =
+  // auth.uid(), so this simply loads "my" rows, nobody else's.
+  async function loadMyQueue() {
+    const { data, error } = await sb.from("player_queue").select("id, player_id, created_at").eq("gm_id", currentUser.id);
+    if (!error) myQueueEntries = data || [];
+  }
+
+  function isQueued(playerId) {
+    return myQueueEntries.some((e) => e.player_id === playerId);
+  }
+
+  async function toggleQueue(playerId) {
+    const existing = myQueueEntries.find((e) => e.player_id === playerId);
+    const { error } = existing
+      ? await sb.from("player_queue").delete().eq("id", existing.id)
+      : await sb.from("player_queue").insert({ gm_id: currentUser.id, player_id: playerId });
+    if (error) {
+      alert("Could not update queue: " + error.message);
+      return;
+    }
+    await loadMyQueue();
+    if (currentDraftRoomData) {
+      renderDrPlayers(currentDraftRoomData);
+      renderDrQueue(currentDraftRoomData);
+    }
   }
 
   function sortPlayers(list, field, dir) {
@@ -1873,9 +1920,13 @@
       } else if (actionType) {
         actionCell = "<td></td>";
       }
+      const queued = isQueued(p.id);
+      const starBtn = '<button type="button" class="queue-star-btn' + (queued ? " queued" : "") +
+        '" data-player-id="' + p.id + '" title="' + (queued ? "Remove from queue" : "Add to queue") + '">' +
+        (queued ? "★" : "☆") + "</button>";
       return (
         "<tr>" +
-          '<td class="ratings-name-cell">' + escapeHtml(p.name) + "</td>" +
+          '<td class="ratings-name-cell">' + starBtn + escapeHtml(p.name) + "</td>" +
           actionCell +
           "<td>" + (p.position ? escapeHtml(p.position) : "—") + "</td>" +
           cells +
@@ -1884,6 +1935,45 @@
     }).join("");
 
     drPlayersSection.innerHTML =
+      '<div class="ratings-table-wrap">' +
+        '<table class="ratings-table"><thead><tr>' + headerCells + "</tr></thead><tbody>" + bodyRows + "</tbody></table>" +
+      "</div>";
+  }
+
+  // Your private watchlist, filtered to players still available in this
+  // draft — a player already picked (by anyone) drops out of view here
+  // without removing the underlying queue row, since the same queue is
+  // reused across drafts sharing the pool. Same table markup/sort headers
+  // as the Players tab, so tapping a column here re-sorts both.
+  function renderDrQueue(d) {
+    const pickedIds = new Set((d.picks || []).map((p) => p.player_id));
+    let queuedPlayers = myQueueEntries
+      .map((e) => allPlayers.find((p) => p.id === e.player_id))
+      .filter((p) => p && !pickedIds.has(p.id));
+    queuedPlayers = sortPlayers(queuedPlayers, playerSortField, playerSortDir);
+
+    if (queuedPlayers.length === 0) {
+      drQueueSection.innerHTML = '<div class="league-loading">No players queued yet — tap the star next to a player in the Players tab.</div>';
+      return;
+    }
+
+    const headerCells = "<th>Name</th><th>Pos</th>" + RATING_FIELDS.map(ratingHeaderCell).join("");
+    const bodyRows = queuedPlayers.map((p) => {
+      const cells = RATING_FIELDS.map((f) => {
+        const v = p[f.key];
+        return '<td class="' + (f.key === playerSortField ? "sort-active" : "") + '">' + (v != null ? v : "—") + "</td>";
+      }).join("");
+      const starBtn = '<button type="button" class="queue-star-btn queued" data-player-id="' + p.id + '" title="Remove from queue">★</button>';
+      return (
+        "<tr>" +
+          '<td class="ratings-name-cell">' + starBtn + escapeHtml(p.name) + "</td>" +
+          "<td>" + (p.position ? escapeHtml(p.position) : "—") + "</td>" +
+          cells +
+        "</tr>"
+      );
+    }).join("");
+
+    drQueueSection.innerHTML =
       '<div class="ratings-table-wrap">' +
         '<table class="ratings-table"><thead><tr>' + headerCells + "</tr></thead><tbody>" + bodyRows + "</tbody></table>" +
       "</div>";
@@ -2081,6 +2171,7 @@
     renderDrPendingAssignment(d);
     renderDrPlayers(d);
     renderDrBoard(d);
+    renderDrQueue(d);
     renderDrPicks(d);
     renderDrRosterList(d);
     renderDrSettingsPanel(d);
@@ -2090,7 +2181,10 @@
     buildPositionPills();
     buildDrPositionPills();
     renderPlayersTab();
-    if (currentDraftRoomData) renderDrPlayers(currentDraftRoomData);
+    if (currentDraftRoomData) {
+      renderDrPlayers(currentDraftRoomData);
+      renderDrQueue(currentDraftRoomData);
+    }
   }
 
   async function loadDraftRoom() {
@@ -2199,6 +2293,19 @@
     refreshPlayerViews();
   });
 
+  drQueueSection.addEventListener("click", (e) => {
+    const th = e.target.closest("th[data-field]");
+    if (!th) return;
+    const field = th.dataset.field;
+    if (field === playerSortField) {
+      playerSortDir = playerSortDir === "desc" ? "asc" : "desc";
+    } else {
+      playerSortField = field;
+      playerSortDir = "desc";
+    }
+    refreshPlayerViews();
+  });
+
   let currentUser = null;
 
   async function renderSignedIn(user) {
@@ -2209,7 +2316,7 @@
     gmEmail.textContent = user.email;
     // League and players must be loaded before drafts, since the live board
     // needs isCommissioner/myTeamIds and the player pool to render correctly.
-    await Promise.all([loadLeague(user), loadPlayers()]);
+    await Promise.all([loadLeague(user), loadPlayers(), loadMyQueue()]);
     await loadDrafts();
     subscribeToPicks();
   }
@@ -2400,6 +2507,13 @@
   });
 
   document.addEventListener("click", async (e) => {
+    const starBtn = e.target.closest(".queue-star-btn");
+    if (starBtn) {
+      starBtn.disabled = true;
+      await toggleQueue(starBtn.dataset.playerId);
+      return;
+    }
+
     const enterBtn = e.target.closest(".enter-draft-room-btn");
     if (enterBtn) {
       openDraftRoom(enterBtn.dataset.draftId);
