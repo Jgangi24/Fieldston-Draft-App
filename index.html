@@ -225,6 +225,59 @@
     font-size: 14px;
   }
   select:focus { outline: none; border-color: var(--accent); }
+  /* Plain button/menu markup standing in for a native <select> — iOS
+     Safari renders <option> lists with its own system picker that ignores
+     page CSS entirely, so a real select can't be themed to match the app. */
+  .custom-select { position: relative; margin-bottom: 16px; }
+  .custom-select-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 400;
+    text-align: left;
+  }
+  .custom-select-toggle:hover { background: #232631; }
+  .custom-select-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .custom-select-chevron { width: 16px; height: 16px; flex-shrink: 0; color: var(--muted); transition: transform 0.15s; }
+  .custom-select.open .custom-select-chevron { transform: rotate(180deg); }
+  .custom-select-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 200;
+    max-height: 240px;
+    overflow-y: auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .custom-select.open .custom-select-menu { display: block; }
+  .custom-select-option {
+    width: 100%;
+    display: block;
+    text-align: left;
+    padding: 10px 12px;
+    background: none;
+    border: none;
+    border-radius: 0;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+  }
+  .custom-select-option:hover { background: var(--border); }
+  .custom-select-option.selected { color: var(--accent); font-weight: 600; }
   .section-title {
     font-size: 12px;
     font-weight: 700;
@@ -542,7 +595,7 @@
     flex-wrap: wrap;
     margin-top: 10px;
   }
-  .bid-row select {
+  .bid-row select, .bid-row .custom-select {
     flex: 1;
     min-width: 140px;
     margin-bottom: 0;
@@ -1046,7 +1099,7 @@
         <div id="drPicksSection"></div>
       </div>
       <div id="dr-subtab-rosters" class="dr-sub-tab-panel">
-        <select id="drRosterTeamSelect"></select>
+        <div id="drRosterTeamSelect" class="custom-select"></div>
         <div id="drRosterListSection"></div>
       </div>
     </div>
@@ -1243,6 +1296,34 @@
     const div = document.createElement("div");
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // Markup for a themed dropdown standing in for a native <select> (see the
+  // .custom-select CSS comment for why). `customSelectInnerHtml` is the
+  // toggle+menu only, for when an existing stable container element plays
+  // the role of the wrapper; `renderCustomSelect` wraps that in a fresh
+  // div with its own id, for cases regenerated wholesale on every render.
+  function customSelectOptionsHtml(options, selectedValue) {
+    return options.map((o) =>
+      '<button type="button" class="custom-select-option' + (o.value === selectedValue ? " selected" : "") +
+      '" data-value="' + escapeHtml(o.value) + '">' + escapeHtml(o.label) + "</button>"
+    ).join("");
+  }
+
+  function customSelectInnerHtml(options, selectedValue) {
+    const selected = options.find((o) => o.value === selectedValue) || options[0] || { label: "" };
+    return '<button type="button" class="custom-select-toggle">' +
+        '<span class="custom-select-label">' + escapeHtml(selected.label || "") + "</span>" +
+        '<svg class="custom-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
+      "</button>" +
+      '<div class="custom-select-menu">' + customSelectOptionsHtml(options, selectedValue) + "</div>";
+  }
+
+  function renderCustomSelect(id, options, selectedValue) {
+    const selected = options.find((o) => o.value === selectedValue) || options[0];
+    return '<div class="custom-select" id="' + id + '" data-value="' + escapeHtml(selected ? selected.value : "") + '">' +
+      customSelectInnerHtml(options, selectedValue) +
+    "</div>";
   }
 
   async function loadLeague(user) {
@@ -2071,17 +2152,18 @@
   }
 
   function buildDrRosterTeamSelect() {
-    if (drRosterTeamSelect.options.length > 0) return;
-    drRosterTeamSelect.innerHTML = allTeams
-      .map((t) => '<option value="' + t.id + '">' + escapeHtml(t.name) + " (" + escapeHtml(t.gmName) + ")</option>")
-      .join("");
+    if (drRosterTeamSelect.dataset.built) return;
+    drRosterTeamSelect.dataset.built = "1";
+    const options = allTeams.map((t) => ({ value: t.id, label: t.name + " (" + t.gmName + ")" }));
     const myFirstTeam = allTeams.find((t) => t.gmId === currentUser.id);
-    if (myFirstTeam) drRosterTeamSelect.value = myFirstTeam.id;
+    const selectedValue = myFirstTeam ? myFirstTeam.id : (options[0] ? options[0].value : "");
+    drRosterTeamSelect.dataset.value = selectedValue;
+    drRosterTeamSelect.innerHTML = customSelectInnerHtml(options, selectedValue);
   }
 
   function renderDrRosterList(d) {
     buildDrRosterTeamSelect();
-    const teamId = drRosterTeamSelect.value;
+    const teamId = drRosterTeamSelect.dataset.value;
     const team = allTeams.find((t) => t.id === teamId);
     const teamPicks = (d.picks || [])
       .filter((p) => p.team_id === teamId)
@@ -2149,14 +2231,14 @@
       return;
     }
     const myTeams = allTeams.filter((t) => t.gmId === currentUser.id);
-    const teamOptions = myTeams.map((t) => '<option value="' + t.id + '">' + escapeHtml(t.name) + "</option>").join("");
+    const teamOptions = myTeams.map((t) => ({ value: t.id, label: t.name }));
     drPendingAssignment.innerHTML = myPending.map((p) => {
       const playerName = p.players ? p.players.name : "Unknown player";
       const selectId = "assignTeamSelect-" + p.id;
       return '<div class="dr-bid-banner dr-assign-banner">' +
         "You won <strong>" + escapeHtml(playerName) + "</strong> for $" + (p.amount_paid || 0) + " — assign to:" +
         '<div class="bid-row">' +
-          '<select id="' + selectId + '">' + teamOptions + "</select>" +
+          renderCustomSelect(selectId, teamOptions, teamOptions[0] ? teamOptions[0].value : "") +
           '<button class="assign-pick-team-btn" data-pick-id="' + p.id + '" data-select-id="' + selectId + '">Confirm</button>' +
         "</div>" +
       "</div>";
@@ -2269,7 +2351,7 @@
     });
   });
 
-  drRosterTeamSelect.addEventListener("change", () => {
+  drRosterTeamSelect.addEventListener("customselect:change", () => {
     if (currentDraftRoomData) renderDrRosterList(currentDraftRoomData);
   });
 
@@ -2506,6 +2588,40 @@
     loadDrafts();
   });
 
+  // Open/close/select behavior for .custom-select widgets — a separate,
+  // unconditional listener rather than another branch in the big delegated
+  // one below, so opening/closing a dropdown never has to thread through
+  // every existing button case there.
+  document.addEventListener("click", (e) => {
+    const toggle = e.target.closest(".custom-select-toggle");
+    if (toggle) {
+      const wrap = toggle.closest(".custom-select");
+      const wasOpen = wrap.classList.contains("open");
+      document.querySelectorAll(".custom-select.open").forEach((el) => el.classList.remove("open"));
+      if (!wasOpen) wrap.classList.add("open");
+      return;
+    }
+
+    const option = e.target.closest(".custom-select-option");
+    if (option) {
+      const wrap = option.closest(".custom-select");
+      wrap.dataset.value = option.dataset.value;
+      wrap.querySelector(".custom-select-label").textContent = option.textContent;
+      wrap.querySelectorAll(".custom-select-option").forEach((o) => o.classList.toggle("selected", o === option));
+      wrap.classList.remove("open");
+      wrap.dispatchEvent(new CustomEvent("customselect:change"));
+      return;
+    }
+
+    document.querySelectorAll(".custom-select.open").forEach((el) => el.classList.remove("open"));
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      document.querySelectorAll(".custom-select.open").forEach((el) => el.classList.remove("open"));
+    }
+  });
+
   document.addEventListener("click", async (e) => {
     const starBtn = e.target.closest(".queue-star-btn");
     if (starBtn) {
@@ -2582,7 +2698,7 @@
       assignBtn.disabled = true;
       const { error } = await sb
         .from("picks")
-        .update({ team_id: select.value })
+        .update({ team_id: select.dataset.value })
         .eq("id", assignBtn.dataset.pickId);
       if (error) {
         alert("Could not assign player to a team: " + error.message);
