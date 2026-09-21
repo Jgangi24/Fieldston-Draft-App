@@ -529,20 +529,32 @@
     color: var(--muted);
     margin-bottom: 6px;
   }
-  .pick-history-row {
-    display: flex;
+  /* Grid (not flex) so columns actually line up between the header row and
+     every data row — with flex, each row sized its 2nd/3rd columns to its
+     own content independently, so "Team" drifted out of alignment with the
+     team names whenever a player name was a different length. */
+  .pick-history-row, .pick-history-header {
+    display: grid;
+    grid-template-columns: 32px 1.3fr 1fr;
     gap: 10px;
+  }
+  .pick-history-row {
     font-size: 12px;
     color: var(--muted);
     padding: 4px 0;
     border-bottom: 1px solid var(--border);
   }
-  .pick-history-row span:first-child {
-    color: var(--text);
-    width: 32px;
-    flex-shrink: 0;
-  }
+  .pick-history-row span:first-child { color: var(--text); }
   .pick-history-row:last-child { border-bottom: none; }
+  .pick-history-row .pick-history-team { color: var(--text); }
+  .pick-history-header {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    padding: 0 0 6px;
+  }
   .pick-team-logo {
     width: 18px;
     height: 18px;
@@ -1991,13 +2003,16 @@
       return;
     }
     drPicksSection.innerHTML = '<div class="pick-history">' +
+      '<div class="pick-history-header"><span></span><span>Player</span><span>Team</span></div>' +
       picks.map((p) => {
         const teamName = p.teams ? p.teams.name : (p.gms ? p.gms.name + " (unassigned)" : "");
         const teamLogo = p.teams ? teamLogoHtml(p.teams.name, p.teams.logo_url) : "";
         const playerName = p.players ? p.players.name : "";
+        const playerPos = p.players && p.players.position ? p.players.position : "";
         const leadLabel = d.format === "auction" ? "$" + (p.amount_paid || 0) : "#" + p.pick_number;
         return '<div class="pick-history-row"><span>' + escapeHtml(String(leadLabel)) + "</span><span>" +
-          escapeHtml(playerName) + "</span><span>" + teamLogo + escapeHtml(teamName) + "</span></div>";
+          escapeHtml(playerName) + (playerPos ? " (" + escapeHtml(playerPos) + ")" : "") +
+          '</span><span class="pick-history-team">' + teamLogo + escapeHtml(teamName) + "</span></div>";
       }).join("") +
     "</div>";
   }
