@@ -17,6 +17,8 @@
     --accent-hover: #6ba0ff;
     --error: #ff6b6b;
     --success: #4fdb8a;
+    --warning: #ff9f43;
+    --warning-hover: #ffb268;
   }
   * { box-sizing: border-box; }
   body {
@@ -651,6 +653,7 @@
     justify-content: center;
   }
   .dr-icon-btn:hover { background: var(--border); }
+  #drSettingsBtn { font-size: 26px; }
   .dr-status {
     flex: 1;
     text-align: center;
@@ -667,14 +670,27 @@
   }
   .dr-settings-panel {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
     padding: 10px 16px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
     font-size: 13px;
   }
+  .dr-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .dr-settings-panel label { margin: 0; }
+  .dr-undo-btn {
+    background: var(--warning);
+    border-color: var(--warning);
+    color: #1a1208;
+    font-weight: 600;
+  }
+  .dr-undo-btn:hover { background: var(--warning-hover); border-color: var(--warning-hover); }
   .dr-settings-panel input {
     width: 70px;
     margin-bottom: 0;
@@ -1416,6 +1432,34 @@
     if (currentDraftRoomId) loadDraftRoom();
   }
 
+  // Reverses the single most recent pick. For salary cap, also reopens the
+  // nomination it closed out (preserving the existing bid state) rather than
+  // deleting it, so bidding can simply resume — that covers both "wrong
+  // winner" and "the auto-award timer shouldn't have fired" cases. The
+  // GM's budget and any team assignment fall out automatically once the
+  // picks row is gone, since both are computed from picks, not stored.
+  async function undoLastPick(d, pickId) {
+    const { error: deleteError } = await sb.from("picks").delete().eq("id", pickId);
+    if (deleteError) {
+      alert("Could not undo pick: " + deleteError.message);
+      return;
+    }
+
+    if (d.format === "auction") {
+      const pick = (d.picks || []).find((p) => p.id === pickId);
+      if (pick) {
+        await sb.from("nominations")
+          .update({ status: "open", resolved_at: null, last_bid_at: new Date().toISOString() })
+          .eq("draft_id", d.id)
+          .eq("nomination_number", pick.pick_number)
+          .eq("status", "sold");
+      }
+    }
+
+    loadDrafts();
+    if (currentDraftRoomId) loadDraftRoom();
+  }
+
   let autoAwardInFlight = new Set();
 
   // Only the commissioner's or the winning GM's own browser can actually
@@ -1896,10 +1940,30 @@
       drSettingsPanel.innerHTML = '<span class="sort-hint">Only the commissioner can adjust draft settings.</span>';
       return;
     }
-    drSettingsPanel.innerHTML =
+    const timerRow = '<div class="dr-settings-row">' +
       "<label>Seconds per pick</label>" +
       '<input type="number" min="10" step="5" id="drTimerSecondsInput" value="' + d.pick_time_seconds + '">' +
-      '<button type="button" id="drTimerSaveBtn">Set</button>';
+      '<button type="button" id="drTimerSaveBtn">Set</button>' +
+    "</div>";
+
+    drSettingsPanel.innerHTML = timerRow + renderDrUndoRow(d);
+  }
+
+  // The undo control only ever targets the single most recent pick, never
+  // an arbitrary one — pick_number/nomination_number aren't stored sequence
+  // counters, they're derived from array position (picks.length + 1), so
+  // removing anything but the last pick would desync that math.
+  function renderDrUndoRow(d) {
+    if (d.status !== "in_progress") return "";
+    const picks = (d.picks || []).slice().sort((a, b) => a.pick_number - b.pick_number);
+    if (picks.length === 0) return "";
+    const lastPick = picks[picks.length - 1];
+    const playerName = lastPick.players ? lastPick.players.name : "Unknown player";
+    return '<div class="dr-settings-row">' +
+      '<button type="button" id="drUndoPickBtn" class="dr-undo-btn" data-pick-id="' + lastPick.id + '">' +
+        "Undo Pick #" + lastPick.pick_number + " — " + escapeHtml(playerName) +
+      "</button>" +
+    "</div>";
   }
 
   function renderDrPendingAssignment(d) {
@@ -1989,16 +2053,25 @@
   });
 
   drSettingsPanel.addEventListener("click", async (e) => {
-    if (e.target.id !== "drTimerSaveBtn") return;
-    const input = document.getElementById("drTimerSecondsInput");
-    const seconds = parseInt(input.value, 10);
-    if (!seconds || seconds < 10) {
-      alert("Enter a valid number of seconds (10 or more).");
+    if (e.target.id === "drTimerSaveBtn") {
+      const input = document.getElementById("drTimerSecondsInput");
+      const seconds = parseInt(input.value, 10);
+      if (!seconds || seconds < 10) {
+        alert("Enter a valid number of seconds (10 or more).");
+        return;
+      }
+      const { error } = await sb.from("drafts").update({ pick_time_seconds: seconds }).eq("id", currentDraftRoomId);
+      if (error) alert("Could not update pick timer: " + error.message);
+      loadDraftRoom();
       return;
     }
-    const { error } = await sb.from("drafts").update({ pick_time_seconds: seconds }).eq("id", currentDraftRoomId);
-    if (error) alert("Could not update pick timer: " + error.message);
-    loadDraftRoom();
+
+    const undoBtn = e.target.closest("#drUndoPickBtn");
+    if (undoBtn) {
+      if (!confirm("Undo this pick? The player goes back into the pool. This can't be redone.")) return;
+      undoBtn.disabled = true;
+      await undoLastPick(currentDraftRoomData, undoBtn.dataset.pickId);
+    }
   });
 
   drTabBtns.forEach((btn) => {
