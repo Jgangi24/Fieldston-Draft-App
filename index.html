@@ -940,6 +940,12 @@
     color: var(--muted);
     margin-bottom: 8px;
   }
+  /* Mobile-first base: tuned to fit 4 tabs on a 375px-wide phone (the
+     narrowest realistic target) with room to spare. A min-width query
+     below widens things for tablet/desktop instead of the other way
+     around — a max-width override sitting earlier in source than the
+     base rule it's meant to beat silently loses the cascade, which is
+     exactly what broke the previous version of this. */
   .dr-nav {
     position: fixed;
     left: 50%;
@@ -947,30 +953,28 @@
     transform: translateX(-50%);
     border-radius: 999px;
     display: flex;
-    gap: 10px;
-    padding: 10px 16px;
+    gap: 8px;
+    padding: 10px 14px;
     z-index: 95;
-    max-width: calc(100vw - 24px);
-  }
-  /* Narrow phones (iPhone SE etc.) can't fit 4 generously-wide pills at
-     once — tighten spacing below this breakpoint so nothing clips instead
-     of relying on max-width alone, which just cuts the last tab off. */
-  @media (max-width: 420px) {
-    .dr-nav { gap: 2px; padding: 8px 10px; }
-    .dr-tab-btn { padding: 6px 12px; }
+    max-width: calc(100vw - 20px);
   }
   /* Padding, icon size, and border-radius stay identical between active
      and inactive states on purpose — only background/color toggle. Any
      state that changes a button's box size makes the whole bottom-anchored
-     nav bar resize (and visibly jump) every time the selected tab changes. */
+     nav bar resize (and visibly jump) every time the selected tab changes.
+     min-width keeps every tab's badge the same size regardless of label
+     length — "Board" is visibly shorter than "Results"/"Players", and
+     without this it rendered as a noticeably smaller pill than its
+     siblings instead of just being center-padded more. */
   .dr-tab-btn {
     width: auto;
     flex: none;
+    min-width: 74px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 5px;
-    padding: 8px 26px;
+    padding: 8px 16px;
     background: transparent;
     border: none;
     border-radius: 999px;
@@ -992,6 +996,10 @@
      blue icon/text — a plain blue icon directly on the nav's frosted-glass
      background was the original illegibility problem. */
   .dr-tab-btn.active { background: var(--bg); color: var(--accent); font-weight: 700; }
+  @media (min-width: 600px) {
+    .dr-nav { gap: 10px; padding: 10px 16px; }
+    .dr-tab-btn { padding: 8px 26px; min-width: 90px; }
+  }
 </style>
 </head>
 <body>
