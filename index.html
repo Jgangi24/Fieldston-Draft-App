@@ -2498,15 +2498,18 @@
     }
     picksChannel = sb
       .channel("picks-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "picks" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "picks" }, (payload) => {
+        console.log("[realtime] picks event:", payload.eventType, payload.new || payload.old);
         loadDrafts();
       if (currentDraftRoomId) loadDraftRoom();
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "nominations" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "nominations" }, (payload) => {
+        console.log("[realtime] nominations event:", payload.eventType, payload.new || payload.old);
         loadDrafts();
       if (currentDraftRoomId) loadDraftRoom();
       })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "drafts" }, () => {
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "drafts" }, (payload) => {
+        console.log("[realtime] drafts event:", payload.eventType, payload.new || payload.old);
         loadDrafts();
       if (currentDraftRoomId) loadDraftRoom();
       })
