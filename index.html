@@ -115,6 +115,25 @@
     outline: none;
     border-color: var(--accent);
   }
+  .password-field { position: relative; margin-bottom: 16px; }
+  .password-field input { margin-bottom: 0; padding-right: 44px; }
+  .password-toggle-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: auto;
+    padding: 6px 10px;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .password-toggle-btn:hover { background: none; color: var(--text); }
+  .password-toggle-btn svg { width: 18px; height: 18px; display: block; }
   button {
     width: 100%;
     padding: 11px;
@@ -1025,7 +1044,12 @@
     <input id="email" type="email" autocomplete="username" placeholder="you@example.com">
 
     <label for="password">Password</label>
-    <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+    <div class="password-field">
+      <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+      <button type="button" id="togglePasswordBtn" class="password-toggle-btn" aria-label="Show password">
+        <svg id="passwordEyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
 
     <button id="loginBtn">Sign In</button>
 
@@ -2340,6 +2364,9 @@
     loginMsg.className = "msg";
     emailInput.value = "";
     passwordInput.value = "";
+    passwordInput.type = "password";
+    passwordEyeIcon.innerHTML = EYE_ICON;
+    togglePasswordBtn.setAttribute("aria-label", "Show password");
     if (picksChannel) {
       sb.removeChannel(picksChannel);
       picksChannel = null;
@@ -2418,6 +2445,18 @@
 
   passwordInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") loginBtn.click();
+  });
+
+  const togglePasswordBtn = document.getElementById("togglePasswordBtn");
+  const passwordEyeIcon = document.getElementById("passwordEyeIcon");
+  const EYE_ICON = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  const EYE_OFF_ICON = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+
+  togglePasswordBtn.addEventListener("click", () => {
+    const revealing = passwordInput.type === "password";
+    passwordInput.type = revealing ? "text" : "password";
+    passwordEyeIcon.innerHTML = revealing ? EYE_OFF_ICON : EYE_ICON;
+    togglePasswordBtn.setAttribute("aria-label", revealing ? "Hide password" : "Show password");
   });
 
   logoutBtn.addEventListener("click", async () => {
