@@ -2473,7 +2473,7 @@
     // needs isCommissioner/myTeamIds and the player pool to render correctly.
     await Promise.all([loadLeague(user), loadPlayers(), loadMyQueue()]);
     await loadDrafts();
-    subscribeToPicks();
+    await subscribeToPicks();
   }
 
   function renderSignedOut() {
@@ -2492,10 +2492,17 @@
     }
   }
 
-  function subscribeToPicks() {
+  async function subscribeToPicks() {
     if (picksChannel) {
       sb.removeChannel(picksChannel);
     }
+    // Postgres Changes enforces RLS using the role attached to the Realtime
+    // socket, which supabase-js doesn't always finish wiring up from the
+    // auth session before a channel subscribes. Without this, the socket
+    // authorizes as anon, so "authenticated"-only RLS policies (like the
+    // one on picks/nominations) silently drop every event with no error.
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) sb.realtime.setAuth(session.access_token);
     picksChannel = sb
       .channel("picks-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "picks" }, (payload) => {
