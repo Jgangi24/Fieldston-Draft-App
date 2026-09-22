@@ -2510,7 +2510,16 @@
         loadDrafts();
       if (currentDraftRoomId) loadDraftRoom();
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        console.log("[realtime] picks-changes:", status, err || "");
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          // The socket failed to (re)connect — retry shortly rather than
+          // leaving the tab silently un-subscribed until a manual refresh.
+          setTimeout(() => {
+            if (currentUser) subscribeToPicks();
+          }, 3000);
+        }
+      });
   }
 
   async function init() {
