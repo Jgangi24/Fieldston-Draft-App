@@ -246,7 +246,7 @@
     width: 100%;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 8px;
     padding: 10px 12px;
     background: var(--card);
@@ -257,6 +257,10 @@
     font-weight: 400;
     text-align: left;
   }
+  /* Only the chevron gets pushed to the far right — icon and label stay
+     snug together on the left instead of space-between spreading all
+     three children apart evenly. */
+  .custom-select-chevron { margin-left: auto; }
   .custom-select-toggle:hover { background: #232631; }
   .custom-select-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .custom-select-chevron { width: 16px; height: 16px; flex-shrink: 0; color: var(--muted); transition: transform 0.15s; }
@@ -863,6 +867,9 @@
     border: 1px solid var(--accent);
     font-size: 13px;
   }
+  .dr-drafting-for-banner { display: flex; align-items: center; gap: 10px; }
+  .dr-drafting-for-label { flex-shrink: 0; font-weight: 600; }
+  .dr-drafting-for-banner .custom-select { flex: 1; max-width: 280px; margin-bottom: 0; min-width: 0; }
   .dr-bid-top {
     display: flex;
     align-items: flex-start;
@@ -1081,6 +1088,15 @@
         <button type="button" id="formatAuctionBtn" class="format-btn">Salary Cap</button>
       </div>
 
+      <div id="snakeRotationField">
+        <label>Pick order by</label>
+        <div class="format-toggle">
+          <button type="button" id="rotationTeamBtn" class="format-btn active">Team (8)</button>
+          <button type="button" id="rotationGmBtn" class="format-btn">GM (4)</button>
+        </div>
+        <div class="field-hint">GM mode: each GM takes one turn (drafting for whichever of their two teams they choose that turn) instead of each team getting its own turn.</div>
+      </div>
+
       <label for="draftRounds" id="draftRoundsLabel">Rounds per team</label>
       <input id="draftRounds" type="number" min="1" step="1" placeholder="e.g. 13">
 
@@ -1189,6 +1205,13 @@
     "lkrauskopf@yahoo.com": "Lew",
   };
 
+  const GM_ICONS = {
+    "Jess": "assets/gm-icons/jess-icon.png",
+    "Lew": "assets/gm-icons/lew-icon.png",
+    "Mike": "assets/gm-icons/mike-icon.png",
+    "Paul": "assets/gm-icons/paul-icon.png",
+  };
+
   const connStatusLine = document.getElementById("connStatusLine");
   const connDot = document.getElementById("connDot");
   const connText = document.getElementById("connText");
@@ -1206,6 +1229,9 @@
   const draftLabelInput = document.getElementById("draftLabel");
   const formatSnakeBtn = document.getElementById("formatSnakeBtn");
   const formatAuctionBtn = document.getElementById("formatAuctionBtn");
+  const snakeRotationField = document.getElementById("snakeRotationField");
+  const rotationTeamBtn = document.getElementById("rotationTeamBtn");
+  const rotationGmBtn = document.getElementById("rotationGmBtn");
   const auctionFields = document.getElementById("auctionFields");
   const draftRoundsLabel = document.getElementById("draftRoundsLabel");
   const draftRoundsInput = document.getElementById("draftRounds");
@@ -1220,6 +1246,12 @@
   let allPlayers = [];
   let myQueueEntries = [];
   let selectedFormat = "snake";
+  let selectedSnakeRotation = "team"; // "team" | "gm" — snake only, ignored for auction
+  // GM-rotation snake: which of the on-the-clock GM's two teams the next
+  // pick goes to. Tracked separately from selectedFormat/Rotation since it
+  // changes turn-by-turn during a live draft, not at setup time.
+  let selectedDraftingForGmId = null;
+  let selectedDraftingTeamId = null;
   let isCommissioner = false;
   let myTeamIds = [];
   let picksChannel = null;
@@ -1319,16 +1351,21 @@
   // toggle+menu only, for when an existing stable container element plays
   // the role of the wrapper; `renderCustomSelect` wraps that in a fresh
   // div with its own id, for cases regenerated wholesale on every render.
+  // `icon`, when present, is trusted HTML (e.g. from teamLogoHtml) shown
+  // before the label — in both the toggle and each option row, kept in
+  // sync on selection by the delegated click handler below.
   function customSelectOptionsHtml(options, selectedValue) {
     return options.map((o) =>
       '<button type="button" class="custom-select-option' + (o.value === selectedValue ? " selected" : "") +
-      '" data-value="' + escapeHtml(o.value) + '">' + escapeHtml(o.label) + "</button>"
+      '" data-value="' + escapeHtml(o.value) + '" data-label="' + escapeHtml(o.label) + '">' +
+      (o.icon || "") + escapeHtml(o.label) + "</button>"
     ).join("");
   }
 
   function customSelectInnerHtml(options, selectedValue) {
     const selected = options.find((o) => o.value === selectedValue) || options[0] || { label: "" };
     return '<button type="button" class="custom-select-toggle">' +
+        (selected.icon || "") +
         '<span class="custom-select-label">' + escapeHtml(selected.label || "") + "</span>" +
         '<svg class="custom-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>' +
       "</button>" +
@@ -1423,10 +1460,14 @@
     return '<th class="' + (isActive ? "sort-active" : "") + '" data-field="' + f.key + '" title="' + escapeHtml(f.label) + '">' + f.short + arrow + "</th>";
   }
 
+  // Auction always rotates by GM (one shared pot per GM, no per-team turn);
+  // snake rotates by GM too when that draft's "Pick order by" is set to GM.
+  function orderIsByGm() {
+    return selectedFormat === "auction" || (selectedFormat === "snake" && selectedSnakeRotation === "gm");
+  }
+
   function buildOrderRows() {
-    // Snake drafts order the 8 teams; salary cap drafts order the 4 GMs
-    // (each GM bids from one shared pot, so there's no per-team turn).
-    const entries = selectedFormat === "auction" ? allGms : allTeams;
+    const entries = orderIsByGm() ? allGms : allTeams;
     const options = entries
       .map((e) => '<option value="' + e.id + '">' + escapeHtml(e.name) + (e.gmName ? " (" + escapeHtml(e.gmName) + ")" : "") + "</option>")
       .join("");
@@ -1729,7 +1770,11 @@
       const nextPickNumber = picks.length + 1;
       if (totalPicks && nextPickNumber > totalPicks) return null;
       const turn = computeTurn(d.draft_order, rotationSize, nextPickNumber);
-      return turn.slot ? { teamId: turn.slot.team_id } : null;
+      if (!turn.slot) return null;
+      // GM-rotation snake: draft_order rows have gm_id set and team_id
+      // null (same nullable-pair pattern as salary cap) — whichever field
+      // is populated tells us which rotation mode this draft is using.
+      return turn.slot.team_id ? { teamId: turn.slot.team_id } : { gmId: turn.slot.gm_id };
     }
     const auctionTotal = draftTotalPicksTarget(d);
     if (auctionTotal && (d.picks || []).length >= auctionTotal) return null;
@@ -1749,18 +1794,25 @@
 
   function renderDrTeamStrip(d) {
     const turn = getCurrentTurn(d);
+    // Covers both salary cap (always GM-based) and GM-rotation snake —
+    // budgets only make sense for salary cap, so that part is conditional.
+    const byGm = d.draft_order.length > 0 && d.draft_order[0].gm_id != null;
 
-    if (d.format === "auction") {
-      // Salary cap: one chip per GM (not team), since bidding is per-GM.
-      const budgets = computeGmBudgets(d);
+    if (byGm) {
+      const budgets = d.format === "auction" ? computeGmBudgets(d) : null;
       drTeamStrip.innerHTML = d.draft_order.map((o) => {
         const gm = allGms.find((g) => g.id === o.gm_id);
         const isCurrent = !!turn && turn.gmId === o.gm_id;
-        const bal = budgets[o.gm_id] != null ? budgets[o.gm_id] : d.starting_budget;
-        return '<div class="dr-team-chip' + (isCurrent ? " current" : "") + '">' +
-          '<div class="dr-team-chip-fallback">' + (gm ? escapeHtml(gm.name.charAt(0)) : "?") + "</div>" +
+        const budgetHtml = budgets
+          ? '<span class="dr-team-budget">$' + (budgets[o.gm_id] != null ? budgets[o.gm_id] : d.starting_budget) + "</span>"
+          : "";
+        const iconUrl = gm ? GM_ICONS[gm.name] : null;
+        const avatar = iconUrl
+          ? '<img src="' + escapeHtml(iconUrl) + '" alt="">'
+          : '<div class="dr-team-chip-fallback">' + (gm ? escapeHtml(gm.name.charAt(0)) : "?") + "</div>";
+        return '<div class="dr-team-chip' + (isCurrent ? " current" : "") + '">' + avatar +
           '<span class="dr-team-name">' + escapeHtml(gm ? gm.name : "Unknown") + "</span>" +
-          '<span class="dr-team-budget">$' + bal + "</span></div>";
+          budgetHtml + "</div>";
       }).join("");
       return;
     }
@@ -1779,7 +1831,6 @@
   function renderDrStatusAndBanner(d) {
     const teamCount = d.draft_order.length;
     const picks = (d.picks || []).slice().sort((a, b) => a.pick_number - b.pick_number);
-    const totalPicks = d.rounds ? d.rounds * teamCount : null;
 
     drBanner.innerHTML = "";
 
@@ -1790,16 +1841,46 @@
 
     if (d.format === "snake") {
       const nextPickNumber = picks.length + 1;
-      if (totalPicks && nextPickNumber > totalPicks) {
+      // Total roster slots always uses the real 8-team count, never
+      // teamCount — that's the rotation size, which is 4 for GM-rotation
+      // snake, not the number of team slots being filled.
+      const totalTarget = draftTotalPicksTarget(d);
+      if (totalTarget && nextPickNumber > totalTarget) {
         drStatus.innerHTML = "🎉 Draft complete!";
         return;
       }
       const turn = computeTurn(d.draft_order, teamCount, nextPickNumber);
-      const teamName = turn.slot && turn.slot.teams ? turn.slot.teams.name : "Unknown team";
+      let whoName = "Unknown";
+      if (turn.slot) {
+        if (turn.slot.team_id) {
+          whoName = turn.slot.teams ? turn.slot.teams.name : "Unknown team";
+        } else {
+          const gm = allGms.find((g) => g.id === turn.slot.gm_id);
+          whoName = gm ? gm.name : "Unknown GM";
+        }
+      }
       const lastPick = picks.length > 0 ? picks[picks.length - 1] : null;
       const baseTime = lastPick ? lastPick.picked_at : d.started_at;
       drStatus.innerHTML = '<span class="dr-round-pick">Round ' + turn.round + " · Pick " + nextPickNumber + "</span>" +
-        escapeHtml(teamName) + renderTimerDisplay(baseTime, d.pick_time_seconds);
+        escapeHtml(whoName) + renderTimerDisplay(baseTime, d.pick_time_seconds);
+
+      // GM-rotation snake: the GM on the clock (or the commissioner,
+      // covering for them) picks which of their two teams gets the next
+      // pick before drafting — no uncertainty to wait out like a salary
+      // cap bid, so this is decided up front rather than assigned after.
+      if (turn.slot && !turn.slot.team_id && (isCommissioner || currentUser.id === turn.slot.gm_id)) {
+        const activeGmId = turn.slot.gm_id;
+        const myTeams = allTeams.filter((t) => t.gmId === activeGmId);
+        if (selectedDraftingForGmId !== activeGmId || !myTeams.some((t) => t.id === selectedDraftingTeamId)) {
+          selectedDraftingForGmId = activeGmId;
+          selectedDraftingTeamId = myTeams[0] ? myTeams[0].id : null;
+        }
+        const teamOptions = myTeams.map((t) => ({ value: t.id, label: t.name, icon: teamLogoHtml(t.name, t.logoUrl) }));
+        drBanner.innerHTML = '<div class="dr-bid-banner dr-drafting-for-banner">' +
+          '<span class="dr-drafting-for-label">Drafting for:</span>' +
+          renderCustomSelect("draftingForTeamSelect", teamOptions, selectedDraftingTeamId) +
+          "</div>";
+      }
       return;
     }
 
@@ -1906,13 +1987,27 @@
 
     if (d.status === "in_progress") {
       const turn = getCurrentTurn(d);
-      if (turn && d.format === "snake") {
+      if (turn && d.format === "snake" && turn.teamId) {
         if (isCommissioner || myTeamIds.indexOf(turn.teamId) !== -1) {
           const nextPickNumber = picks.length + 1;
           const computed = computeTurn(d.draft_order, teamCount, nextPickNumber);
           actionType = "draft";
           actionTeamId = turn.teamId;
           actionExtra = { pickNumber: nextPickNumber, round: computed.round };
+        }
+      } else if (turn && d.format === "snake" && turn.gmId) {
+        // GM-rotation snake: the team comes from the "Drafting for" picker
+        // in the status banner, not from draft_order directly — a GM has
+        // two teams, so there's no single fixed team_id for their turn.
+        if (isCommissioner || turn.gmId === currentUser.id) {
+          const myTeams = allTeams.filter((t) => t.gmId === turn.gmId);
+          if (selectedDraftingTeamId && myTeams.some((t) => t.id === selectedDraftingTeamId)) {
+            const nextPickNumber = picks.length + 1;
+            const computed = computeTurn(d.draft_order, teamCount, nextPickNumber);
+            actionType = "draft";
+            actionTeamId = selectedDraftingTeamId;
+            actionExtra = { pickNumber: nextPickNumber, round: computed.round };
+          }
         }
       } else if (turn && d.format === "auction") {
         if (isCommissioner || turn.gmId === currentUser.id) {
@@ -2031,8 +2126,12 @@
     const picks = d.picks || [];
     const turn = getCurrentTurn(d);
     const cols = d.draft_order;
+    const byGm = cols.length > 0 && cols[0].gm_id != null;
 
-    if (d.format === "snake") {
+    if (!byGm) {
+      // Team-rotation snake: one column per team, one row per round —
+      // round number lines up 1:1 with "how many players this team has"
+      // since the rotation size equals the team count (8).
       const nextPickNumber = picks.length + 1;
       const currentTurn = turn ? computeTurn(cols, cols.length, nextPickNumber) : null;
 
@@ -2056,10 +2155,18 @@
       return;
     }
 
+    // GM-based columns: salary cap (nominations, matched by pick.gm_id,
+    // shows price) and GM-rotation snake (matched by which of the GM's two
+    // teams got the pick that round, no price — snake picks resolve to a
+    // real team_id up front, they never carry gm_id).
     const rotationSize = cols.length;
     const totalTarget = draftTotalPicksTarget(d);
     const maxRound = totalTarget ? Math.ceil(totalTarget / rotationSize) : 1;
-    const currentRound = Math.ceil(((d.nominations || []).length + 1) / rotationSize);
+    const nextPickNumber = picks.length + 1;
+    const currentTurn = d.format === "snake" && turn ? computeTurn(cols, rotationSize, nextPickNumber) : null;
+    const currentRound = d.format === "auction"
+      ? Math.ceil(((d.nominations || []).length + 1) / rotationSize)
+      : (currentTurn ? currentTurn.round : null);
 
     const headerCells = cols.map((o, i) => {
       const gm = allGms.find((g) => g.id === o.gm_id);
@@ -2068,15 +2175,17 @@
     let bodyRows = "";
     for (let r = 1; r <= maxRound; r++) {
       const cells = cols.map((o, i) => {
-        const pick = picks.find((p) => p.gm_id === o.gm_id && p.round === r);
+        const pick = d.format === "auction"
+          ? picks.find((p) => p.gm_id === o.gm_id && p.round === r)
+          : picks.find((p) => p.round === r && allTeams.some((t) => t.id === p.team_id && t.gmId === o.gm_id));
         const isCurrent = !!turn && turn.gmId === o.gm_id && currentRound === r;
         const cellClass = boardCellClass(i, isCurrent);
         if (!pick) return '<td class="' + cellClass + '"></td>';
         const playerName = pick.players ? pick.players.name : "?";
         const playerPos = pick.players && pick.players.position ? pick.players.position : "";
+        const priceHtml = d.format === "auction" ? '<span class="dr-board-price">$' + (pick.amount_paid || 0) + "</span>" : "";
         return '<td class="' + cellClass + '">' + escapeHtml(playerName) +
-          (playerPos ? " (" + escapeHtml(playerPos) + ")" : "") +
-          '<span class="dr-board-price">$' + (pick.amount_paid || 0) + "</span></td>";
+          (playerPos ? " (" + escapeHtml(playerPos) + ")" : "") + priceHtml + "</td>";
       }).join("");
       bodyRows += "<tr><th>" + r + "</th>" + cells + "</tr>";
     }
@@ -2308,6 +2417,16 @@
     if (currentDraftRoomData) renderDrRosterList(currentDraftRoomData);
   });
 
+  // The "Drafting for" team picker (GM-rotation snake) is rebuilt fresh
+  // inside drBanner on every render rather than being a stable element
+  // like drRosterTeamSelect, so this listens via bubbling instead of
+  // being attached directly to the select itself.
+  drBanner.addEventListener("customselect:change", (e) => {
+    if (e.target.id !== "draftingForTeamSelect") return;
+    selectedDraftingTeamId = e.target.dataset.value;
+    if (currentDraftRoomData) renderDrPlayers(currentDraftRoomData);
+  });
+
   drPositionPills.addEventListener("click", (e) => {
     const btn = e.target.closest(".position-pill");
     if (!btn) return;
@@ -2469,6 +2588,7 @@
     formatAuctionBtn.classList.remove("active");
     draftRoundsLabel.textContent = "Rounds per team";
     auctionFields.style.display = "none";
+    snakeRotationField.style.display = "block";
     if (isCommissioner) buildOrderRows();
   });
 
@@ -2478,6 +2598,21 @@
     formatSnakeBtn.classList.remove("active");
     draftRoundsLabel.textContent = "Roster size per team (# of players)";
     auctionFields.style.display = "block";
+    snakeRotationField.style.display = "none";
+    if (isCommissioner) buildOrderRows();
+  });
+
+  rotationTeamBtn.addEventListener("click", () => {
+    selectedSnakeRotation = "team";
+    rotationTeamBtn.classList.add("active");
+    rotationGmBtn.classList.remove("active");
+    if (isCommissioner) buildOrderRows();
+  });
+
+  rotationGmBtn.addEventListener("click", () => {
+    selectedSnakeRotation = "gm";
+    rotationGmBtn.classList.add("active");
+    rotationTeamBtn.classList.remove("active");
     if (isCommissioner) buildOrderRows();
   });
 
@@ -2505,11 +2640,11 @@
       return;
     }
 
-    const orderEntries = selectedFormat === "auction" ? allGms : allTeams;
+    const orderEntries = orderIsByGm() ? allGms : allTeams;
     const orderIds = orderEntries.map((_, i) => document.getElementById("orderPos" + (i + 1)).value);
     const uniqueIds = new Set(orderIds);
     if (uniqueIds.size !== orderEntries.length) {
-      showDraftMsg("Each " + (selectedFormat === "auction" ? "GM" : "team") + " must be assigned to exactly one pick position — you have a duplicate.", "error");
+      showDraftMsg("Each " + (orderIsByGm() ? "GM" : "team") + " must be assigned to exactly one pick position — you have a duplicate.", "error");
       return;
     }
 
@@ -2538,8 +2673,8 @@
 
     const orderRowsPayload = orderIds.map((id, i) => ({
       draft_id: draft.id,
-      team_id: selectedFormat === "auction" ? null : id,
-      gm_id: selectedFormat === "auction" ? id : null,
+      team_id: orderIsByGm() ? null : id,
+      gm_id: orderIsByGm() ? id : null,
       pick_position: i + 1,
     }));
     const { error: orderError } = await sb.from("draft_order").insert(orderRowsPayload);
@@ -2579,10 +2714,17 @@
     if (option) {
       const wrap = option.closest(".custom-select");
       wrap.dataset.value = option.dataset.value;
-      wrap.querySelector(".custom-select-label").textContent = option.textContent;
+      wrap.querySelector(".custom-select-label").textContent = option.dataset.label;
+      // Carry the option's icon (if any) over to the toggle button — clone
+      // it fresh each time rather than trying to diff/reuse the old one.
+      const toggleBtn = wrap.querySelector(".custom-select-toggle");
+      const oldIcon = toggleBtn.querySelector(".pick-team-logo");
+      if (oldIcon) oldIcon.remove();
+      const newIcon = option.querySelector(".pick-team-logo");
+      if (newIcon) toggleBtn.insertBefore(newIcon.cloneNode(true), toggleBtn.firstChild);
       wrap.querySelectorAll(".custom-select-option").forEach((o) => o.classList.toggle("selected", o === option));
       wrap.classList.remove("open");
-      wrap.dispatchEvent(new CustomEvent("customselect:change"));
+      wrap.dispatchEvent(new CustomEvent("customselect:change", { bubbles: true }));
       return;
     }
 
