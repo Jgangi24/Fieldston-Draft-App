@@ -123,6 +123,7 @@
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
   button:hover { background: var(--accent-hover); }
   button:disabled { opacity: 0.5; cursor: default; }
@@ -958,12 +959,19 @@
     padding: 4px 2px;
     background: transparent;
     border: none;
+    border-radius: 0;
+    appearance: none;
+    -webkit-appearance: none;
     color: var(--muted);
     font-size: 11px;
     font-weight: 600;
   }
+  .dr-tab-btn:hover, .dr-tab-btn:focus, .dr-tab-btn:active { background: transparent; outline: none; }
   .dr-tab-btn svg { width: 23px; height: 23px; }
-  .dr-tab-btn.active { color: var(--accent); }
+  /* Active = brighter/bolder text+icon only, same convention as the
+     reference nav the user pointed at — no colored background block,
+     since accent-blue icon strokes on an accent-blue fill were unreadable. */
+  .dr-tab-btn.active { color: var(--text); font-weight: 700; }
 </style>
 </head>
 <body>
