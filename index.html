@@ -2543,6 +2543,19 @@
     }
   });
 
+  // Mobile Safari (and other browsers) can silently drop the Realtime
+  // WebSocket while the tab is backgrounded/locked, and Realtime doesn't
+  // replay missed events on reconnect. Re-subscribing and re-fetching
+  // whenever the tab becomes visible again forces a resync instead of
+  // leaving the UI stuck on stale data until a manual page refresh.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && currentUser) {
+      subscribeToPicks();
+      loadDrafts();
+      if (currentDraftRoomId) loadDraftRoom();
+    }
+  });
+
   loginBtn.addEventListener("click", async () => {
     const email = emailInput.value.trim();
     const password = passwordInput.value;
