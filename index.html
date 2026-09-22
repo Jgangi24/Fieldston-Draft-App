@@ -33,6 +33,27 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     padding: 48px 16px;
   }
+  /* Launch splash — sits above everything (higher than the Draft Room's
+     z-index:100) and is purely a visual layer: it never gates the actual
+     sign-in/data-loading flow underneath, just fades out on its own. */
+  .splash-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: var(--bg);
+    cursor: pointer;
+    transition: opacity 0.4s ease;
+  }
+  .splash-screen picture, .splash-screen img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .splash-screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
   .card {
     width: 100%;
     max-width: 560px;
@@ -946,6 +967,13 @@
 </style>
 </head>
 <body>
+
+<div id="splashScreen" class="splash-screen">
+  <picture>
+    <source media="(min-width: 768px)" srcset="assets/splash/desktop.png">
+    <img src="assets/splash/phone.png" alt="">
+  </picture>
+</div>
 
 <div class="card">
   <div id="connStatusLine" class="status-line" style="display:none;">
@@ -2688,6 +2716,18 @@
       loadDrafts();
     }
   });
+
+  // Launch splash: shows on every load. Purely decorative, so it never
+  // blocks init() from running underneath it.
+  (function () {
+    const splashScreen = document.getElementById("splashScreen");
+    const dismiss = () => {
+      splashScreen.classList.add("hidden");
+      setTimeout(() => splashScreen.remove(), 400);
+    };
+    splashScreen.addEventListener("click", dismiss);
+    setTimeout(dismiss, 2500);
+  })();
 
   init();
 </script>
