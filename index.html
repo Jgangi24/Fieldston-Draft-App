@@ -2506,6 +2506,11 @@
     if (session) {
       sb.realtime.setAuth(session.access_token);
       console.log("[realtime] setAuth called with token ending in:", session.access_token.slice(-8));
+      // setAuth() alone doesn't reliably re-authorize a WebSocket that was
+      // already opened under anonymous auth (e.g. from an earlier check
+      // before sign-in) — force a full disconnect so the next channel join
+      // opens a brand-new socket carrying the correct token from the start.
+      sb.realtime.disconnect();
     }
     picksChannel = sb
       .channel("picks-changes")
