@@ -799,6 +799,9 @@
     font-weight: 600;
   }
   .dr-undo-btn:hover { background: var(--warning-hover); border-color: var(--warning-hover); }
+  .dr-pause-btn { background: var(--warning); border-color: var(--warning); color: #1a1208; font-weight: 600; }
+  .dr-pause-btn:hover { background: var(--warning-hover); border-color: var(--warning-hover); }
+  .dr-resume-btn { background: var(--success); border-color: var(--success); color: #0c1f14; font-weight: 600; }
   .dr-settings-panel input {
     width: 70px;
     margin-bottom: 0;
@@ -1643,15 +1646,15 @@
       const order = (d.draft_order || []).slice().sort((a, b) => a.pick_position - b.pick_position);
       d.draft_order = order;
 
-      const cancelBtnHtml = (isCommissioner && (d.status === "setup" || d.status === "in_progress"))
+      const cancelBtnHtml = (isCommissioner && (d.status === "setup" || d.status === "in_progress" || d.status === "paused"))
         ? '<button class="cancel-draft-btn secondary" data-draft-id="' + d.id + '">Cancel Draft</button>'
         : "";
-      const deleteBtnHtml = (isCommissioner && d.status !== "in_progress")
+      const deleteBtnHtml = (isCommissioner && d.status !== "in_progress" && d.status !== "paused")
         ? '<button class="delete-draft-btn secondary" data-draft-id="' + d.id + '">Delete Draft</button>'
         : "";
 
       let bodyHtml;
-      if (d.status === "in_progress") {
+      if (d.status === "in_progress" || d.status === "paused") {
         bodyHtml = '<button type="button" class="enter-draft-room-btn" data-draft-id="' + d.id + '">Enter Draft Room</button>' + cancelBtnHtml;
       } else {
         // Setup/completed/cancelled drafts collapse to a summary by default —
@@ -1834,6 +1837,10 @@
 
     drBanner.innerHTML = "";
 
+    if (d.status === "paused") {
+      drStatus.innerHTML = "⏸ Draft Paused";
+      return;
+    }
     if (d.status !== "in_progress") {
       drStatus.textContent = statusLabel(d.status);
       return;
@@ -2264,7 +2271,21 @@
       '<button type="button" id="drTimerSaveBtn">Set</button>' +
     "</div>";
 
-    drSettingsPanel.innerHTML = timerRow + renderDrUndoRow(d);
+    drSettingsPanel.innerHTML = timerRow + renderDrPauseRow(d) + renderDrUndoRow(d);
+  }
+
+  function renderDrPauseRow(d) {
+    if (d.status === "in_progress") {
+      return '<div class="dr-settings-row">' +
+        '<button type="button" id="drPauseBtn" class="dr-pause-btn">⏸ Pause Draft</button>' +
+      "</div>";
+    }
+    if (d.status === "paused") {
+      return '<div class="dr-settings-row">' +
+        '<button type="button" id="drResumeBtn" class="dr-resume-btn">▶ Resume Draft</button>' +
+      "</div>";
+    }
+    return "";
   }
 
   // The undo control only ever targets the single most recent pick, never
@@ -2392,6 +2413,28 @@
       if (!confirm("Undo this pick? The player goes back into the pool. This can't be redone.")) return;
       undoBtn.disabled = true;
       await undoLastPick(currentDraftRoomData, undoBtn.dataset.pickId);
+    }
+
+    if (e.target.id === "drPauseBtn") {
+      e.target.disabled = true;
+      const { error } = await sb.from("drafts").update({ status: "paused" }).eq("id", currentDraftRoomId);
+      if (error) alert("Could not pause draft: " + error.message);
+      loadDraftRoom();
+    }
+
+    if (e.target.id === "drResumeBtn") {
+      e.target.disabled = true;
+      // Resetting any open nomination's bid clock keeps a paused salary-cap
+      // bid from immediately auto-awarding the instant the draft resumes —
+      // checkAutoAward() judges the deadline off last_bid_at, which would
+      // otherwise still reflect time that passed while paused.
+      const openNom = currentDraftRoomData && (currentDraftRoomData.nominations || []).find((n) => n.status === "open");
+      if (openNom) {
+        await sb.from("nominations").update({ last_bid_at: new Date().toISOString() }).eq("id", openNom.id);
+      }
+      const { error } = await sb.from("drafts").update({ status: "in_progress" }).eq("id", currentDraftRoomId);
+      if (error) alert("Could not resume draft: " + error.message);
+      loadDraftRoom();
     }
   });
 
