@@ -2502,33 +2502,27 @@
     // authorizes as anon, so "authenticated"-only RLS policies (like the
     // one on picks/nominations) silently drop every event with no error.
     const { data: { session } } = await sb.auth.getSession();
-    console.log("[realtime] setAuth: session?", !!session, "setAuth is a function?", typeof sb.realtime.setAuth === "function");
     if (session) {
       // setAuth() can involve pushing the token to the socket over the
       // network — without awaiting it, the channel join below can race
       // ahead and subscribe before the new token is actually applied.
       await sb.realtime.setAuth(session.access_token);
-      console.log("[realtime] setAuth resolved, token ending in:", session.access_token.slice(-8));
     }
     picksChannel = sb
       .channel("picks-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "picks" }, (payload) => {
-        console.log("[realtime] picks event:", payload.eventType, payload.new || payload.old);
+      .on("postgres_changes", { event: "*", schema: "public", table: "picks" }, () => {
         loadDrafts();
       if (currentDraftRoomId) loadDraftRoom();
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "nominations" }, (payload) => {
-        console.log("[realtime] nominations event:", payload.eventType, payload.new || payload.old);
+      .on("postgres_changes", { event: "*", schema: "public", table: "nominations" }, () => {
         loadDrafts();
       if (currentDraftRoomId) loadDraftRoom();
       })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "drafts" }, (payload) => {
-        console.log("[realtime] drafts event:", payload.eventType, payload.new || payload.old);
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "drafts" }, () => {
         loadDrafts();
       if (currentDraftRoomId) loadDraftRoom();
       })
-      .subscribe((status, err) => {
-        console.log("[realtime] picks-changes:", status, err || "");
+      .subscribe((status) => {
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           // The socket failed to (re)connect — retry shortly rather than
           // leaving the tab silently un-subscribed until a manual refresh.
