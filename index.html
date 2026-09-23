@@ -2504,8 +2504,11 @@
     const { data: { session } } = await sb.auth.getSession();
     console.log("[realtime] setAuth: session?", !!session, "setAuth is a function?", typeof sb.realtime.setAuth === "function");
     if (session) {
-      sb.realtime.setAuth(session.access_token);
-      console.log("[realtime] setAuth called with token ending in:", session.access_token.slice(-8));
+      // setAuth() can involve pushing the token to the socket over the
+      // network — without awaiting it, the channel join below can race
+      // ahead and subscribe before the new token is actually applied.
+      await sb.realtime.setAuth(session.access_token);
+      console.log("[realtime] setAuth resolved, token ending in:", session.access_token.slice(-8));
     }
     picksChannel = sb
       .channel("picks-changes")
