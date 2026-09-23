@@ -2502,7 +2502,11 @@
     // authorizes as anon, so "authenticated"-only RLS policies (like the
     // one on picks/nominations) silently drop every event with no error.
     const { data: { session } } = await sb.auth.getSession();
-    if (session) sb.realtime.setAuth(session.access_token);
+    console.log("[realtime] setAuth: session?", !!session, "setAuth is a function?", typeof sb.realtime.setAuth === "function");
+    if (session) {
+      sb.realtime.setAuth(session.access_token);
+      console.log("[realtime] setAuth called with token ending in:", session.access_token.slice(-8));
+    }
     picksChannel = sb
       .channel("picks-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "picks" }, (payload) => {
