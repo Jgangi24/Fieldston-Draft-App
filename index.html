@@ -861,6 +861,7 @@
     font-weight: 700;
     color: var(--success);
   }
+  .dr-team-chip .you-badge { margin-top: 1px; }
   .dr-banner:empty { display: none; }
   .dr-bid-banner {
     margin: 10px 16px 0;
@@ -1806,6 +1807,7 @@
       drTeamStrip.innerHTML = d.draft_order.map((o) => {
         const gm = allGms.find((g) => g.id === o.gm_id);
         const isCurrent = !!turn && turn.gmId === o.gm_id;
+        const isMe = o.gm_id === currentUser.id;
         const budgetHtml = budgets
           ? '<span class="dr-team-budget">$' + (budgets[o.gm_id] != null ? budgets[o.gm_id] : d.starting_budget) + "</span>"
           : "";
@@ -1815,7 +1817,7 @@
           : '<div class="dr-team-chip-fallback">' + (gm ? escapeHtml(gm.name.charAt(0)) : "?") + "</div>";
         return '<div class="dr-team-chip' + (isCurrent ? " current" : "") + '">' + avatar +
           '<span class="dr-team-name">' + escapeHtml(gm ? gm.name : "Unknown") + "</span>" +
-          budgetHtml + "</div>";
+          budgetHtml + (isMe ? '<span class="you-badge">You</span>' : "") + "</div>";
       }).join("");
       return;
     }
@@ -1823,11 +1825,13 @@
     drTeamStrip.innerHTML = d.draft_order.map((o) => {
       const team = o.teams;
       const isCurrent = !!turn && turn.teamId === o.team_id;
+      const isMe = myTeamIds.indexOf(o.team_id) !== -1;
       const logo = team && team.logo_url
         ? '<img src="' + escapeHtml(team.logo_url) + '" alt="">'
         : '<div class="dr-team-chip-fallback">' + (team ? escapeHtml(team.name.charAt(0)) : "?") + "</div>";
       return '<div class="dr-team-chip' + (isCurrent ? " current" : "") + '">' + logo +
-        '<span class="dr-team-name">' + escapeHtml(team ? team.name : "Unknown") + "</span></div>";
+        '<span class="dr-team-name">' + escapeHtml(team ? team.name : "Unknown") + "</span>" +
+        (isMe ? '<span class="you-badge">You</span>' : "") + "</div>";
     }).join("");
   }
 
